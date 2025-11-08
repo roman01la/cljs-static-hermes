@@ -47,6 +47,10 @@
 (defn handle-build-complete [runtime {:keys [info reload-info] :as msg}]
   (let [{:keys [sources compiled warnings]} info]
 
+    (when env/log
+      (doseq [{:keys [msg line column resource-name] :as w} warnings]
+        (js/console.warn (str "BUILD-WARNING in " resource-name " at [" line ":" column "]\n\t" msg))))
+
     (when (and env/autoload
                (or (empty? warnings) env/ignore-warnings))
 
@@ -63,6 +67,18 @@
     ;; hack to force eval in global scope
     ;; goog.globalEval doesn't have a return value so can't use that for REPL invokes
     (js* "(0,eval)(~{});" js)))
+
+(defonce hud (atom {:warnings [] :errors []}))
+
+(defn hud-warnings [{:keys [type info] :as msg}]
+  (let [{:keys [sources]} info
+        sources-with-warnings
+        (->> sources
+             (remove :from-jar)
+             (filter #(seq (:warnings %)))
+             (into []))]
+    (swap! hud assoc :warnings sources-with-warnings)))
+
 
 (when (and env/enabled (pos? env/worker-client-id))
 
@@ -144,6 +160,7 @@
             :cljs-build-start
             (fn [msg]
               ;; (js/console.log "cljs-build-start" msg)
+              (reset! hud {})
               (env/run-custom-notify! (assoc msg :type :build-start)))
 
             :cljs-build-complete
@@ -151,11 +168,13 @@
               ;; (js/console.log "cljs-build-complete" msg)
               (let [msg (env/add-warnings-to-info msg)]
                 (handle-build-complete runtime msg)
+                (hud-warnings msg)
                 (env/run-custom-notify! (assoc msg :type :build-complete))))
 
             :cljs-build-failure
             (fn [msg]
               ;; (js/console.log "cljs-build-failure" msg)
+              (swap! hud assoc :errors [(:report msg)])
               (env/run-custom-notify! (assoc msg :type :build-failure)))
 
             ::env/worker-notify

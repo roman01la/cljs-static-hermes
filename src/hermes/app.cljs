@@ -1,25 +1,6 @@
 (ns hermes.app
   (:require [uix.core :as uix :refer [$ defui]]
-            ["react-imgui-reconciler/reconciler.js" :as rir]))
-
-(defonce reload-fn (atom nil))
-
-(defn ^:dev/after-load reload []
-  (@reload-fn))
-
-(defn register [{:keys [title width height]} render-root]
-  ;; create react root
-  (let [root (rir/createRoot)]
-    ;; Configure window (optional - defaults are provided)
-    (set! (.-sappConfig js/globalThis)
-          #js {:title title
-               :width width
-               :height height})
-    (reset! reload-fn #(rir/render (render-root) root))
-    ;; register root rendering
-    (set! (.-reactApp js/globalThis)
-          #js {:rootChildren #js []
-               :render #(rir/render (render-root) root)})))
+            [hermes.client]))
 
 (defui background []
   ($ :<>
@@ -100,7 +81,7 @@
    "Buenos Aires", "Kolkata", "Istanbul", "Rio de Janeiro", "Manila",])
 
 (def rows (count cities))
-(def cols 12)
+(def cols 8)
 
 (defn value->color [value]
   (cond
@@ -186,7 +167,7 @@
 (defui app []
   (let [[counter1 set-counter-1] (uix/use-state 0)
         [counter2 set-counter-2] (uix/use-state 0)]
-    ($ :root
+    ($ :<>
       ;; Background decorations - rendered first, behind windows
       ($ background)
        ;; Status bar at the top
@@ -259,26 +240,7 @@
       ($ :rect {:x 0 :y 575 :width 1200 :height 25 :color "#00000080" :filled true})
       ($ :text {:color "#888888"} "Root component demo - Background shapes and overlay elements render behind/above all windows"))))
 
-
-(def error-boundary
-  (uix/create-error-boundary
-    {:derive-error-state (fn [error] {:error error})}
-    (fn [[{:keys [error]} set-state] {:keys [children]}]
-      (if error
-        ($ :root
-           ($ :window {:title "Error"
-                       :default-x 150
-                       :default-y 150
-                       :default-width 500
-                       :default-height 300}
-             ($ :text {:color "#FF0000"}
-                (.-stack error))
-             ($ :button {:on-click (fn []
-                                     (set-state {})
-                                     (reload))}
-                "Restart")))
-        children))))
-
 (defn init []
-  (register {:title "ClojureScript + UIx + React + ImGui Showcase" :width 1024 :height 768}
-            #($ error-boundary ($ app))))
+  (hermes.client/register
+    {:title "ClojureScript + UIx + React + ImGui Showcase" :width 1024 :height 768}
+    #($ app)))

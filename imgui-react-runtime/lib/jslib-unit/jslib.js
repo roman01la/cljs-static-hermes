@@ -219,6 +219,10 @@
       const formatted = args.map(formatArg).join(' ');
       print('ERROR:', formatted);
     },
+      warn: function (...args) {
+          const formatted = args.map(formatArg).join(' ');
+          print('WARNING:', formatted);
+      },
     debug: function (...args) {
       // No-op for now
     },
