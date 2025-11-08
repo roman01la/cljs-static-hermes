@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "react": "19.2.0",
+    "react-reconciler": "0.33.0",
+    "scheduler": "^0.27.0",
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-react": "^7.27.1",
+    "esbuild": "^0.25.11"
+  }
+}

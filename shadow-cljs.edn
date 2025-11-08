@@ -1,0 +1,10 @@
+{:deps true
+ :builds
+ {:app {:target :esm
+        :output-dir "imgui-react-runtime/examples/uix/out"
+        :modules {:main {:entries [hermes.app]
+                         :init-fn hermes.app/init}}
+        :js-options {:js-provider :import}
+        :runtime :custom
+        :devtools {:client-ns hermes.repl.client}
+        :closure-defines {goog/DEBUG false}}}}
