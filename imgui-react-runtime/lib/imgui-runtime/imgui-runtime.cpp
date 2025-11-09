@@ -152,7 +152,7 @@ extern "C" const simgui_image_t *image_simgui_image(int index)
 
 static void app_init()
 {
-  sg_desc desc = {.context = sapp_sgcontext(), .logger.func = slog_func};
+  sg_desc desc = {.logger.func = slog_func, .context = sapp_sgcontext()};
   sg_setup(&desc);
   simgui_setup(simgui_desc_t{});
 

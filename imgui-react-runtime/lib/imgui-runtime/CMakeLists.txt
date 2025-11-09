@@ -18,5 +18,6 @@ target_link_libraries(imgui-runtime
     sokol stb cimgui imgui-unit jslib-unit websockets
     $<$<CONFIG:Release>:hermesvm_a jsi boost_context>
     $<$<CONFIG:Debug>:hermesvm>
+    $<$<PLATFORM_ID:Linux>:icuuc icui18n icudata>
 )
 target_include_directories(imgui-runtime INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

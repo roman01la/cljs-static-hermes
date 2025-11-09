@@ -11,6 +11,38 @@ When modifying the project structure, build system, architecture, or implementat
 
 Always update CLAUDE.md as part of your work - do not defer documentation updates.
 
+## IMPORTANT: Development Workflow
+
+**⚠️ DO NOT COMMIT CODE BEFORE USER REVIEW AND TESTING**
+
+When implementing changes:
+1. Write and test the code
+2. Wait for the user to review the changes
+3. Wait for the user to test the implementation
+4. Only commit after explicit user approval
+
+Never commit code immediately after implementation. The user must review and test first.
+
+**⚠️ COMMIT MESSAGE STYLE**
+
+Write commit messages that are factual and technical:
+- State what was changed, not how you feel about it
+- Use objective language without emotion, opinions, or exaggeration
+- Avoid words like "awesome", "amazing", "great", "excellent", "beautiful"
+- Be concise and descriptive
+- Focus on the technical change and its purpose
+- Wrap lines at 72 characters
+
+Good examples:
+- "Add ICU library linking for Linux compatibility"
+- "Fix case-sensitive filesystem issue in Hermes includes"
+- "Pass compiler settings to Hermes external project"
+
+Bad examples:
+- "Amazing fix for the awesome Linux build!"
+- "Greatly improve the build system"
+- "Make things work better"
+
 ## Project Overview
 
 This project implements a custom React reconciler that renders to DearImGUI using Static Hermes. The goal is to use React's declarative component model and JSX syntax to describe ImGUI interfaces, while learning how React works internally.
@@ -54,8 +86,8 @@ guireact/
 
 **Example Applications (examples/):**
 - **showcase/**: Main showcase application
-  - React application components (JSX files)
-  - **showcase.cpp**: Application entry point
+    - React application components (JSX files)
+    - **showcase.cpp**: Application entry point
 
 ## Three-Unit Architecture (jslib + React + ImGUI)
 
@@ -113,23 +145,23 @@ We split the implementation into three separate units that communicate via `glob
 - React library (19.2.0) - from npm, production mode
 - react-reconciler (0.33.0) - from npm
 - Custom reconciler (lib/react-imgui-reconciler/):
-  - tree-node.js - TreeNode and TextNode data structures
-  - host-config.js - React reconciler host configuration
-  - reconciler.js - Reconciler instance and render API
-  - tree-printer.js - Debug utility for printing tree
+    - tree-node.js - TreeNode and TextNode data structures
+    - host-config.js - React reconciler host configuration
+    - reconciler.js - Reconciler instance and render API
+    - tree-printer.js - Debug utility for printing tree
 - Application code (examples/showcase/):
-  - app.jsx, StockTable.jsx, BouncingBall.jsx
-  - index.js - Entry point
+    - app.jsx, StockTable.jsx, BouncingBall.jsx
+    - index.js - Entry point
 
 **Build Process:**
 1. esbuild bundles: React + react-reconciler + custom reconciler + app code
-   - Transpiles JSX → JavaScript
-   - Resolves 'react-imgui-reconciler' alias to lib/react-imgui-reconciler/
-   - Bundles to IIFE format → `react-unit-bundle.js` (in build directory)
+    - Transpiles JSX → JavaScript
+    - Resolves 'react-imgui-reconciler' alias to lib/react-imgui-reconciler/
+    - Bundles to IIFE format → `react-unit-bundle.js` (in build directory)
 2. Compilation modes (configured via REACT_BUNDLE_MODE):
-   - Mode 0: shermes native compilation → `react-unit.o` (slowest build, fastest runtime)
-   - Mode 1: hermes bytecode → `react-unit-bundle.hbc` (medium build/runtime)
-   - Mode 2: Source bundle only (fastest build, slowest runtime, default for Debug)
+    - Mode 0: shermes native compilation → `react-unit.o` (slowest build, fastest runtime)
+    - Mode 1: hermes bytecode → `react-unit-bundle.hbc` (medium build/runtime)
+    - Mode 2: Source bundle only (fastest build, slowest runtime, default for Debug)
 
 **What it does:**
 - Builds and maintains component tree as plain JS objects
@@ -216,15 +248,15 @@ The imgui-runtime library provides the C++ infrastructure for integrating Hermes
 
 **Components:**
 - **imgui-runtime.cpp/h**: Core runtime management
-  - Hermes runtime initialization with microtask queue
-  - Event loop integration with Sokol
-  - Unit loading and lifecycle management
-  - `performance.now()` host function
-  - Image loading utilities
+    - Hermes runtime initialization with microtask queue
+    - Event loop integration with Sokol
+    - Unit loading and lifecycle management
+    - `performance.now()` host function
+    - Image loading utilities
 - **MappedFileBuffer.cpp/h**: Memory-mapped file loading
-  - Efficient loading of React bundles/bytecode
-  - Zero-copy file access via mmap
-  - Used for modes 1 (bytecode) and 2 (source)
+    - Efficient loading of React bundles/bytecode
+    - Zero-copy file access via mmap
+    - Used for modes 1 (bytecode) and 2 (source)
 
 **Application Entry Point (examples/showcase/showcase.cpp):**
 Applications implement `imgui_main()` to load React bundles:
@@ -253,19 +285,37 @@ void imgui_main(int argc, char *argv[],
 ### Build System (CMake)
 
 **Hermes Build Integration (cmake/HermesExternal.cmake):**
+The build system supports two modes for obtaining Hermes:
+
+**Option 1: Using Pre-built Hermes (Recommended for CI/Shared Builds)**
+```bash
+# Point to an existing Hermes build directory
+cmake -B build -DHERMES_BUILD_DIR=/path/to/hermes-build
+```
+- **Fast Configuration**: Skips git clone and build, uses existing Hermes
+- **Auto-detect Source**: Reads source path from `CMakeCache.txt` in build directory
+- **Validation**: Checks that build directory and shermes binary exist
+- **Use Cases**:
+    - CI caching: Build Hermes once, cache it, reuse across jobs
+    - Local development: Share one Hermes build across multiple projects
+    - Faster iteration: Skip 5-10 minute Hermes rebuild
+
+**Option 2: Automatic Build (Default)**
 Hermes is automatically cloned and built as part of the CMake build using `ExternalProject_Add`:
 - **Automatic Git Clone**: Hermes is cloned from GitHub at configure time
 - **Configurable Version**: Set via `HERMES_GIT_TAG` (default: specific commit hash)
-  - Can be a commit hash, branch name, or tag
-  - Example: `cmake -B build -DHERMES_GIT_TAG=abc123def`
+    - Can be a commit hash, branch name, or tag
+    - Example: `cmake -B build -DHERMES_GIT_TAG=abc123def`
 - **Always Release Mode**: Hermes always builds in Release mode regardless of parent project build type
 - **Per-Config Isolation**: Each build configuration gets its own Hermes clone
-  - Debug: `cmake-build-debug/hermes-src/` (source) + `cmake-build-debug/hermes/` (build)
-  - Release: `cmake-build-release/hermes-src/` (source) + `cmake-build-release/hermes/` (build)
-- **No Manual Setup**: Users don't need to manually build or specify HERMES_BUILD/HERMES_SRC paths
+    - Debug: `cmake-build-debug/hermes-src/` (source) + `cmake-build-debug/hermes/` (build)
+    - Release: `cmake-build-release/hermes-src/` (source) + `cmake-build-release/hermes/` (build)
+- **No Manual Setup**: Users don't need to manually build or specify paths
+
+**Build Configuration:**
 - **Static vs Shared Linking**:
-  - Release builds: Link statically against `hermesvm_a`, `jsi`, and `boost_context` for optimal performance
-  - Debug builds: Link dynamically against `hermesvm` shared library for faster build times
+    - Release builds: Link statically against `hermesvm_a`, `jsi`, and `boost_context` for optimal performance
+    - Debug builds: Link dynamically against `hermesvm` shared library for faster build times
 - **Transitive Dependencies**: All Hermes libraries are linked through `imgui-runtime`, not directly by application targets
 
 **Root CMakeLists.txt:**
@@ -351,8 +401,8 @@ This replaces what was previously 80+ lines of boilerplate CMake code.
 
 **Implemented Components:**
 - `<window>` - ImGui window with title, optional positioning, and close button support
-  - Props: `title`, `x`, `y`, `width`, `height`, `defaultX`, `defaultY`, `defaultWidth`, `defaultHeight`, `flags`, `onWindowState`, `onClose`
-  - `onClose` callback enables the close button (X) in title bar and is called when user clicks it
+    - Props: `title`, `x`, `y`, `width`, `height`, `defaultX`, `defaultY`, `defaultWidth`, `defaultHeight`, `flags`, `onWindowState`, `onClose`
+    - `onClose` callback enables the close button (X) in title bar and is called when user clicks it
 - `<text>` - Text rendering with optional color prop
 - `<button>` - Clickable buttons with onClick handlers
 - `<separator>` - Horizontal separator line
@@ -365,23 +415,23 @@ This replaces what was previously 80+ lines of boilerplate CMake code.
 ```jsx
 // examples/showcase/app.jsx
 export function App() {
-  const [counter, setCounter] = useState(0);
+    const [counter, setCounter] = useState(0);
 
-  return (
-    <>
-      <window title="Hello from React!" x={20} y={20}>
-        <text>React + ImGui working perfectly!</text>
-        <button onClick={() => setCounter(counter + 1)}>
-          Click me!
-        </button>
-        <text>Button clicked {counter} times</text>
-      </window>
+    return (
+        <>
+            <window title="Hello from React!" x={20} y={20}>
+                <text>React + ImGui working perfectly!</text>
+                <button onClick={() => setCounter(counter + 1)}>
+                    Click me!
+                </button>
+                <text>Button clicked {counter} times</text>
+            </window>
 
-      <window title="Second Window" x={400} y={20}>
-        <text color="#00FFFF">Multiple windows supported!</text>
-      </window>
-    </>
-  );
+            <window title="Second Window" x={400} y={20}>
+                <text color="#00FFFF">Multiple windows supported!</text>
+            </window>
+        </>
+    );
 }
 ```
 
@@ -392,39 +442,39 @@ Windows can be dynamically created and destroyed using React state. The `onClose
 ```jsx
 // examples/dynamic-windows/app.jsx
 export function App() {
-  const [windows, setWindows] = useState([
-    { id: 1, title: "Window 1" },
-    { id: 2, title: "Window 2" },
-  ]);
-  const [nextId, setNextId] = useState(3);
+    const [windows, setWindows] = useState([
+        { id: 1, title: "Window 1" },
+        { id: 2, title: "Window 2" },
+    ]);
+    const [nextId, setNextId] = useState(3);
 
-  const addWindow = () => {
-    setWindows([...windows, { id: nextId, title: `Window ${nextId}` }]);
-    setNextId(nextId + 1);
-  };
+    const addWindow = () => {
+        setWindows([...windows, { id: nextId, title: `Window ${nextId}` }]);
+        setNextId(nextId + 1);
+    };
 
-  const closeWindow = (windowId) => {
-    setWindows(windows.filter(w => w.id !== windowId));
-  };
+    const closeWindow = (windowId) => {
+        setWindows(windows.filter(w => w.id !== windowId));
+    };
 
-  return (
-    <>
-      <window title="Control Panel">
-        <button onClick={addWindow}>Add New Window</button>
-        <text>Total windows: {windows.length}</text>
-      </window>
+    return (
+        <>
+            <window title="Control Panel">
+                <button onClick={addWindow}>Add New Window</button>
+                <text>Total windows: {windows.length}</text>
+            </window>
 
-      {windows.map(w => (
-        <window
-          key={w.id}
-          title={w.title}
-          onClose={() => closeWindow(w.id)}
-        >
-          <text>Click the X button to close this window</text>
-        </window>
-      ))}
-    </>
-  );
+            {windows.map(w => (
+                <window
+                    key={w.id}
+                    title={w.title}
+                    onClose={() => closeWindow(w.id)}
+                >
+                    <text>Click the X button to close this window</text>
+                </window>
+            ))}
+        </>
+    );
 }
 ```
 
@@ -452,20 +502,20 @@ Each TreeNode is assigned a unique integer ID at creation time. This ID is pushe
 // tree-node.js: Each node gets unique ID
 let nextNodeId = 1;
 class TreeNode {
-  constructor(type, props) {
-    this.id = nextNodeId++;  // Stable for node's lifetime
-    // ...
-  }
+    constructor(type, props) {
+        this.id = nextNodeId++;  // Stable for node's lifetime
+        // ...
+    }
 }
 
 // renderer.js: ID stack guards rendering
 function renderNode(node) {
-  _igPushID_Int(node.id);
-  try {
-    // ... render node ...
-  } finally {
-    _igPopID();  // Always cleanup, even on exception
-  }
+    _igPushID_Int(node.id);
+    try {
+        // ... render node ...
+    } finally {
+        _igPopID();  // Always cleanup, even on exception
+    }
 }
 ```
 
@@ -520,6 +570,36 @@ cmake --build cmake-build-debug
 ```bash
 cmake -B cmake-build-debug -DHERMES_GIT_TAG=<commit-hash>
 cmake --build cmake-build-debug --target hermes-rebuild  # Force rebuild
+```
+
+**Using a pre-built Hermes:**
+```bash
+# Point to an existing Hermes build directory
+cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -DHERMES_BUILD_DIR=/path/to/hermes-build
+cmake --build cmake-build-debug
+```
+
+**CI Workflow with Hermes Caching:**
+```yaml
+# Build Hermes once in a separate job, cache it, and reuse
+- name: Cache Hermes build
+  id: hermes-cache
+  uses: actions/cache@v4
+  with:
+    path: hermes-build
+    key: ${{ runner.os }}-hermes-${{ hashFiles('.github/hermes-version.txt') }}
+
+- name: Build Hermes (if not cached)
+  if: steps.hermes-cache.outputs.cache-hit != 'true'
+  run: |
+    git clone https://github.com/facebook/hermes.git hermes-src
+    cmake -S hermes-src -B hermes-build -DCMAKE_BUILD_TYPE=Release
+    cmake --build hermes-build --config Release
+
+- name: Build project with cached Hermes
+  run: |
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DHERMES_BUILD_DIR=${{ github.workspace }}/hermes-build
+    cmake --build build
 ```
 
 **Important:**

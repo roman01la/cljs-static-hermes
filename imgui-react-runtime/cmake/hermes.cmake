@@ -89,7 +89,7 @@ function(hermes_compile_native)
     # Create custom command
     add_custom_command(
         OUTPUT ${ARG_OUTPUT}
-        COMMAND ${SHERMES} ${COMPILER_FLAGS}
+        COMMAND ${CMAKE_COMMAND} -E env CC=${CMAKE_C_COMPILER} ${SHERMES} ${COMPILER_FLAGS}
         DEPENDS ${ARG_SOURCES} ${ARG_DEPENDS}
         WORKING_DIRECTORY ${ARG_WORKING_DIRECTORY}
         COMMENT ${ARG_COMMENT}

@@ -75,6 +75,11 @@ function(add_react_imgui_app)
         ${CMAKE_CURRENT_SOURCE_DIR}/*.js
     )
 
+    # Check if npm install has been run
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/../node_modules")
+        message(FATAL_ERROR "node_modules/ directory not found. Please run 'npm install' in the project root before building.")
+    endif()
+
     # Build dependency list
     set(REACT_UNIT_DEPS
         ${RECONCILER_FILES}

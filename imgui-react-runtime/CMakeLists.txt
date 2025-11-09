@@ -3,6 +3,11 @@ project(imgui-react-runtime)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# Suppress C99 designator warnings for C++ files with GCC/Clang
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-c99-designator>)
+endif()
+
 # Validate required variables
 if(NOT CMAKE_BUILD_TYPE)
     message(FATAL_ERROR "CMAKE_BUILD_TYPE must be set (e.g., Debug or Release)")
@@ -46,7 +51,7 @@ file(GLOB RECONCILER_FILES
 # Hermes include directories
 include_directories(${HERMES_BUILD}/lib/config)
 include_directories(${HERMES_SRC}/include)
-include_directories(${HERMES_SRC}/Public)
+include_directories(${HERMES_SRC}/public)
 include_directories(${HERMES_SRC}/API)
 include_directories(${HERMES_SRC}/API/jsi)
 

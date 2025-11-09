@@ -28,40 +28,41 @@ _**Note**: This project is an independent experiment and is not affiliated with,
 - [Features](#features)
 - [What is Static Hermes?](#what-is-static-hermes)
 - [Platform Support & Requirements](#platform-support--requirements)
-  - [Supported Platforms](#supported-platforms)
-  - [Build Requirements](#build-requirements)
-  - [Quick Start](#quick-start)
+    - [Supported Platforms](#supported-platforms)
+    - [Build Requirements](#build-requirements)
+    - [Quick Start](#quick-start)
 - [Examples](#examples)
-  - [Hello World](#hello-world)
-  - [Showcase](#showcase)
-  - [Dynamic Windows](#dynamic-windows)
+    - [Hello World](#hello-world)
+    - [Showcase](#showcase)
+    - [Dynamic Windows](#dynamic-windows)
 - [Creating Your Own App](#creating-your-own-app)
 - [Supported Components](#supported-components)
-  - [Container Components](#container-components)
-  - [Text & Display](#text--display)
-  - [Interactive Components](#interactive-components)
-  - [Layout Components](#layout-components)
-  - [Table Components](#table-components)
-  - [Drawing Primitives](#drawing-primitives)
-  - [Adding New Components](#adding-new-components)
+    - [Container Components](#container-components)
+    - [Text & Display](#text--display)
+    - [Interactive Components](#interactive-components)
+    - [Layout Components](#layout-components)
+    - [Table Components](#table-components)
+    - [Drawing Primitives](#drawing-primitives)
+    - [Adding New Components](#adding-new-components)
 - [Architecture](#architecture)
-  - [Three-Unit Architecture](#three-unit-architecture)
-  - [Component Overview](#component-overview)
-  - [Rendering Pipeline](#rendering-pipeline)
+    - [Three-Unit Architecture](#three-unit-architecture)
+    - [Component Overview](#component-overview)
+    - [Rendering Pipeline](#rendering-pipeline)
 - [Build System](#build-system)
-  - [CMake Structure](#cmake-structure)
-  - [Compilation Modes](#compilation-modes)
-  - [Building the Project](#building-the-project)
+    - [CMake Structure](#cmake-structure)
+    - [Compilation Modes](#compilation-modes)
+    - [Building the Project](#building-the-project)
 - [License](#license)
 
 ## Features
 
 - ✅ **Fully native compilation** - Release builds are standalone executables with zero dependencies and instant startup
-  - Showcase example: 5.2MB total (3MB Hermes VM, 1.8MB React native code, rest is app/renderer/ImGui)
-  - No JavaScript files, no bytecode, no interpreter at runtime
-  - Lightning-fast startup - no parsing, no JIT warmup, just native code execution
-  - Single executable distribution
+    - Showcase example: 5.2MB total (3MB Hermes VM, 1.8MB React native code, rest is app/renderer/ImGui)
+    - No JavaScript files, no bytecode, no interpreter at runtime
+    - Lightning-fast startup - no parsing, no JIT warmup, just native code execution
+    - Single executable distribution
 - ✅ **React 19.2.0** with custom reconciler
+- ✅ **React Compiler support** - Optional automatic memoization optimization
 - ✅ **Static Hermes** with zero-overhead FFI to Dear ImGui
 - ✅ **Event loop** with `setTimeout`, `setImmediate`, and Promise support
 - ✅ **React hooks** (`useState`, `useEffect`, etc.)
@@ -96,27 +97,30 @@ This project uses typed mode for the ImGui FFI layer (`lib/imgui-unit/`) and unt
 ### Supported Platforms
 
 - **macOS** ✅ Fully tested and supported
-- **Linux** 🔨 Expected to work with minimal changes (untested)
+- **Linux** ✅ Tested on Ubuntu 24.04.3 LTS
 - **Windows** ⏳ Coming soon (waiting for Static Hermes Windows support)
 
 ### Build Requirements
 
 You'll need:
 
-- **Node.js and npm** - For esbuild bundler and React dependencies
-  - macOS: `brew install node` or download from [nodejs.org](https://nodejs.org/)
-  - Linux: `apt-get install nodejs npm` or `yum install nodejs npm`
+- **Node.js and npm** (Node 20 or later recommended) - For esbuild bundler and React dependencies
+    - macOS: `brew install node` or download from [nodejs.org](https://nodejs.org/)
+    - Linux: `snap install node --classic` (recommended) or `apt-get install nodejs npm`
 - **C++ Compiler**
-  - **Clang** (recommended) - Officially supported by Static Hermes
-  - GCC also works but Clang is the tested configuration
-  - macOS: Install [Xcode Command Line Tools](https://developer.apple.com/xcode/) or full Xcode
-  - Linux: `apt-get install clang` or `yum install clang`
+    - **Clang** (recommended) - Officially supported by Static Hermes
+    - GCC also works but Clang is the tested configuration
+    - macOS: Install [Xcode Command Line Tools](https://developer.apple.com/xcode/) or full Xcode
+    - Linux: `apt-get install clang` or `yum install clang`
 - **CMake** (3.20 or later)
-  - macOS: `brew install cmake`
-  - Linux: `apt-get install cmake` or `yum install cmake`
+    - macOS: `brew install cmake`
+    - Linux: `apt-get install cmake` or `yum install cmake`
 - **Ninja** - Fast build system
-  - macOS: `brew install ninja`
-  - Linux: `apt-get install ninja-build` or `yum install ninja-build`
+    - macOS: `brew install ninja`
+    - Linux: `apt-get install ninja-build` or `yum install ninja-build`
+- **Graphics libraries** - Required for Sokol (window management and OpenGL rendering)
+    - macOS: (no additional packages needed)
+    - Linux: `apt-get install libx11-dev libxi-dev libxcursor-dev libgl1-mesa-dev libicu-dev`
 
 **That's it!** The project has **no other dependencies**. The CMake build process automatically downloads and builds Static Hermes on first configure.
 
@@ -131,7 +135,12 @@ cd imgui-react-runtime
 npm install
 
 # Configure (downloads and builds Hermes automatically on first run)
-cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -G Ninja
+# On Linux, explicitly specify Clang as the compiler:
+cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -G Ninja \
+  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+# On macOS, Clang is the default, so just:
+# cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -G Ninja
 
 # Build all examples
 cmake --build cmake-build-debug
@@ -993,6 +1002,21 @@ Override the mode explicitly:
 ```bash
 cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -DREACT_BUNDLE_MODE=1
 ```
+
+### React Compiler (Optional)
+
+React Compiler is an optional build feature that automatically adds memoization to React components. It's disabled by default and can be enabled via CMake:
+
+```bash
+cmake -B build -DUSE_REACT_COMPILER=ON
+cmake --build build
+```
+
+**How it works:**
+- Uses a two-pass build: Babel preprocessing → esbuild bundling
+- Babel transforms React components to add `useMemoCache` calls
+- Components skip re-renders when props/state haven't changed
+- Works with all compilation modes (native/bytecode/source)
 
 ### Hermes Build Integration
 
