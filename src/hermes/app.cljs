@@ -242,5 +242,7 @@
 
 (defn init []
   (hermes.client/register
-    {:title "ClojureScript + UIx + React + ImGui Showcase" :width 1024 :height 768}
-    #($ app)))
+    {:title "ClojureScript + UIx + React + ImGui Showcase"
+     :width 1024
+     :height 768
+     :component #'app}))

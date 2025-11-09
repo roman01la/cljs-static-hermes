@@ -65,10 +65,11 @@
           children)
         ($ hud)))))
 
-(defn register [{:keys [title width height]} render-root]
+(defn register [{:keys [title width height component]}]
   ;; create react root
   (let [root (rir/createRoot)
-        render-fn* #(rir/render ($ error-boundary (render-root)) root)]
+        render-fn* #(let [component (if (var? component) @component component)]
+                      (rir/render ($ error-boundary ($ component)) root))]
     ;; Configure window (optional - defaults are provided)
     (set! (.-sappConfig js/globalThis)
           #js {:title title

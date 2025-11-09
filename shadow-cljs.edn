@@ -6,5 +6,5 @@
                          :init-fn hermes.app/init}}
         :js-options {:js-provider :import}
         :runtime :custom
-        :devtools {:client-ns hermes.repl.client}
-        :closure-defines {goog/DEBUG false}}}}
+        :devtools {:client-ns hermes.repl.client
+                   :preloads [hermes.devtools uix.preload]}}}}
