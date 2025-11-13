@@ -65,10 +65,8 @@
   // if the host drives the event loop once per frame.
   var rafQueue = {};
   var rafNextId = 1;
-  var rafScheduled = false;
 
   function flushRaf() {
-    rafScheduled = false;
     // Take a snapshot of callbacks and clear the queue so rAFs scheduled
     // inside a callback run on the next tick (matching browser semantics).
     var cbs = [];
@@ -101,10 +99,6 @@
   function requestAnimationFrame(callback) {
     var id = rafNextId++;
     rafQueue[id] = callback;
-    if (!rafScheduled) {
-      rafScheduled = true;
-      setTimeout(flushRaf, 16);
-    }
     return id;
   }
 
@@ -229,5 +223,5 @@
   };
 
   // Return helper functions for C++ to use
-  return { peek: peekMacroTask, run: runMacroTask };
+  return { peek: peekMacroTask, run: runMacroTask, flushRaf };
 })();

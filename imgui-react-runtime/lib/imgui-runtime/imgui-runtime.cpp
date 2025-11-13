@@ -31,11 +31,13 @@ public:
   facebook::hermes::HermesRuntime *hermes = nullptr;
   facebook::jsi::Function peekMacroTask;
   facebook::jsi::Function runMacroTask;
+  facebook::jsi::Function flushRaf;
 
   HermesApp(SHRuntime *shr, facebook::jsi::Function &&peek,
-            facebook::jsi::Function &&run)
+            facebook::jsi::Function &&run, facebook::jsi::Function &&flushRaf)
       : shRuntime(shr, &_sh_done), hermes(_sh_get_hermes_runtime(shr)),
-        peekMacroTask(std::move(peek)), runMacroTask(std::move(run)) {}
+        peekMacroTask(std::move(peek)), runMacroTask(std::move(run)),
+        flushRaf(std::move(flushRaf)) {}
 
   // Delete copy/move to ensure singleton behavior
   HermesApp(const HermesApp &) = delete;
@@ -274,6 +276,8 @@ static void app_frame()
       s_hermesApp->hermes->drainMicrotasks();
     }
 
+    s_hermesApp->flushRaf.call(*s_hermesApp->hermes);
+
     // Render frame (this is also a macrotask)
     s_hermesApp->hermes->global()
         .getPropertyAsFunction(*s_hermesApp->hermes, "on_frame")
@@ -434,7 +438,8 @@ sapp_desc sokol_main(int argc, char *argv[])
     // Create and initialize HermesApp
     s_hermesApp =
         new HermesApp(shr, helpers.getPropertyAsFunction(*hermes, "peek"),
-                      helpers.getPropertyAsFunction(*hermes, "run"));
+                      helpers.getPropertyAsFunction(*hermes, "run"),
+                      helpers.getPropertyAsFunction(*hermes, "flushRaf"));
 
     initializeWebSocketSupport(*s_hermesApp->hermes);
 
