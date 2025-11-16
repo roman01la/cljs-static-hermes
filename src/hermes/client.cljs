@@ -5,7 +5,7 @@
 
 (defonce reload-fn (atom nil))
 
-(defn ^:dev/after-load reload []
+(defn reload []
   (@reload-fn))
 
 (defui compiler-warnings-hud [{:keys [warnings]}]

@@ -11,6 +11,10 @@ import hostConfig from './host-config.js';
  */
 const reconciler = Reconciler(hostConfig);
 
+if (process.env.NODE_ENV === 'development') {
+    reconciler.injectIntoDevTools();
+}
+
 /**
  * Create a root container for rendering.
  * This is the entry point - call this once to create a render target.

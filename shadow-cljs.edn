@@ -7,4 +7,4 @@
         :js-options {:js-provider :import}
         :runtime :custom
         :devtools {:client-ns hermes.repl.client
-                   :preloads [hermes.devtools uix.preload]}}}}
+                   :preloads [uix.preload]}}}}
