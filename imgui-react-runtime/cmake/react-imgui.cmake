@@ -69,11 +69,19 @@ function(add_react_imgui_app)
     set(REACT_UNIT_BUNDLE ${CMAKE_CURRENT_BINARY_DIR}/react-unit-bundle.js)
 
     # Collect app source files automatically
-    file(GLOB APP_FILES
+    file(GLOB_RECURSE APP_FILES
         CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/*.jsx
         ${CMAKE_CURRENT_SOURCE_DIR}/*.js
     )
+
+    # Make sure the entry point is listed with an absolute path
+    if(IS_ABSOLUTE ARG_ENTRY_POINT)
+        set(ENTRY_POINT_PATH ${ARG_ENTRY_POINT})
+    else()
+        set(ENTRY_POINT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_ENTRY_POINT})
+    endif()
+    list(APPEND REACT_UNIT_DEPS ${ENTRY_POINT_PATH})
 
     # Check if npm install has been run
     if(NOT EXISTS "${CMAKE_SOURCE_DIR}/../node_modules")

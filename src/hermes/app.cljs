@@ -164,6 +164,39 @@
          ($ :text {:wrapped true}
             "The buttons demonstrate programmatic control: just update state!")))))
 
+(defui radial-menu []
+  (let [[open? set-open] (uix/use-state false)
+        [selected set-selected] (uix/use-state nil)
+        actions ["Cut", "Copy", "Paste", "Delete", "Save"]
+        handle-select (fn [idx]
+                        (set-selected (nth actions idx))
+                        (set-open false))]
+    ($ :window {:title "Radial Menu"
+                :default-width 420
+                :default-height 320
+                :default-y 460
+                :default-x 16}
+       ($ :text "This example demonstrates creating custom ImGui widgets.")
+       ($ :text "The RadialMenu is a custom widget built using ImGui's draw list API.")
+       ($ :separator)
+       ($ :text "Click the button to open the radial menu:")
+       ($ :button {:on-click #(set-open not)}
+          (if open? "Close Menu" "Open Menu"))
+       (when open?
+         ($ :<>
+            ($ :separator)
+            ($ :radialmenu {:radius 80
+                            :items (into-array actions)
+                            :on-item-click handle-select
+                            :center-text "Actions"})
+            ($ :separator)))
+       (when selected
+         ($ :<>
+            ($ :text {:color "#00FF88"} "Selected action: " selected)
+            ($ :separator)))
+       ($ :text {:color "#888888"} "Hover over menu sectors to highlight them.")
+       ($ :text {:color "#888888"} "Click a sector to select an action."))))
+
 (defui app []
   (let [[counter1 set-counter-1] (uix/use-state 0)
         [counter2 set-counter-2] (uix/use-state 0)]
@@ -176,6 +209,7 @@
       ($ bouncing-ball)
       ($ stock-table)
       ($ controlled-window)
+      ($ radial-menu)
       ($ :window {:title "Hello from React!"
                   :default-x 20
                   :default-y 40}

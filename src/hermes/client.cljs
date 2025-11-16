@@ -23,7 +23,7 @@
         ($ :text {:color "#ffff00"}
           (str (str/join "\n" before)
                "\n" l "\n"
-               (.padStart "" column ".") "^"
+               (.padStart "" (dec column) ".") "^"
                "\n"
                (str/join "\n" after)))))))
 

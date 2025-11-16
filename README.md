@@ -8,6 +8,8 @@ Differences from _tmikov/imgui-react-runtime_:
 - Bundles [UIx](https://github.com/pitch-io/uix) app written in ClojureScript 
 - Exposes `WebSocket` interface to JS env via [libwebsockets](https://github.com/warmcat/libwebsockets), needed for REPL connection in dev
 - Supports hot-reloading cljs code in dev, via custom REPL client runtime
+- Supports state preserving hot-reloading via react-refresh
+- Runs `requestAnimationFrame` at device's refresh rate (60/120/144hz etc)
 
 ## Development
 
