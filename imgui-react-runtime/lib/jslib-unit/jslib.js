@@ -66,7 +66,7 @@
   var rafQueue = {};
   var rafNextId = 1;
 
-  function flushRaf() {
+  function flushRaf(ts) {
     // Take a snapshot of callbacks and clear the queue so rAFs scheduled
     // inside a callback run on the next tick (matching browser semantics).
     var cbs = [];
@@ -76,7 +76,6 @@
         delete rafQueue[id];
       }
     }
-    var ts = curTime;
     for (var i = 0; i < cbs.length; i++) {
       try {
         cbs[i](ts);
@@ -213,10 +212,10 @@
       const formatted = args.map(formatArg).join(' ');
       print('ERROR:', formatted);
     },
-      warn: function (...args) {
-          const formatted = args.map(formatArg).join(' ');
-          print('WARNING:', formatted);
-      },
+    warn: function (...args) {
+      const formatted = args.map(formatArg).join(' ');
+      print('WARNING:', formatted);
+    },
     debug: function (...args) {
       // No-op for now
     },

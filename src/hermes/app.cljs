@@ -35,29 +35,32 @@
         [by set-by] (uix/use-state 150)
         speed 5.0
         angle (* (Math/random) 2 Math/PI)
-        [vx set-vx] (uix/use-state (* speed (Math/cos angle)))
-        [vy set-vy] (uix/use-state (* speed (Math/sin angle)))]
+        vx (uix/use-ref (* speed (Math/cos angle)))
+        vy (uix/use-ref (* speed (Math/sin angle)))]
 
     (uix/use-effect
       (fn []
-        (let [id (atom nil)]
+        (let [id (atom nil)
+              time (atom (js/performance.now))]
           (reset! id
             (js/requestAnimationFrame
-              (fn render []
-                (let [update-ball (fn [b v set-v side]
-                                    (let [c (+ b v)]
+              (fn render [t]
+                (let [dt (- t @time)
+                      _ (reset! time t)
+                      update-ball (fn [b v side]
+                                    (let [c (+ b @v)]
                                       (if (or (<= (- c ball-radius) border-thickness)
                                               (>= (+ c ball-radius) (- side border-thickness)))
-                                        (do (set-v #(- %))
+                                        (do (reset! v (- @v))
                                             (if (<= (- c ball-radius) border-thickness)
                                               (+ ball-radius border-thickness)
                                               (- side ball-radius border-thickness)))
                                         c)))]
-                  (set-bx #(update-ball % vx set-vx content-width))
-                  (set-by #(update-ball % vy set-vy content-height))
+                  (set-bx #(update-ball % vx content-width))
+                  (set-by #(update-ball % vy content-height))
                   (reset! id (js/requestAnimationFrame render))))))
           #(js/cancelAnimationFrame @id)))
-      [ball-radius border-thickness content-width content-height vx vy])
+      [])
 
     ($ :window {:title "Bouncing Ball"
                 :default-x 600

@@ -276,7 +276,7 @@ static void app_frame()
       s_hermesApp->hermes->drainMicrotasks();
     }
 
-    s_hermesApp->flushRaf.call(*s_hermesApp->hermes);
+    s_hermesApp->flushRaf.call(*s_hermesApp->hermes, curTimeMs);
 
     // Render frame (this is also a macrotask)
     s_hermesApp->hermes->global()
