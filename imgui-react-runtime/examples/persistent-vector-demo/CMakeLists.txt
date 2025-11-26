@@ -20,8 +20,20 @@ target_link_directories(persistent-vector-demo PRIVATE
 
 # Link libraries
 target_link_libraries(persistent-vector-demo
+    PRIVATE
     native-cljs
     $<$<CONFIG:Release>:hermesvm_a jsi>
     $<$<CONFIG:Debug>:hermesvm>
     $<$<PLATFORM_ID:Linux>:icuuc icui18n icudata>
 )
+
+# On macOS the Hermes static libraries depend on CoreFoundation and Boost.Context
+if(APPLE)
+    target_link_directories(persistent-vector-demo PRIVATE
+        ${CMAKE_BINARY_DIR}/hermes/external/boost/boost_1_86_0/libs/context
+    )
+    target_link_libraries(persistent-vector-demo PRIVATE
+        "-framework CoreFoundation"
+        boost_context
+    )
+endif()

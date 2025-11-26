@@ -340,13 +340,15 @@
     (print-section "Benchmark 8: first and last (using peek for last)")
     (println (str "  Getting first/peek from vector of size " large-size))
     (println "  Note: Using 'peek' instead of 'last' for efficient last-element access")
+    (println "  Note: Using pv/native-first for native vector (avoids seq overhead)")
     (println "")
     
     (let [cljs-v (vec (range large-size))
           native-v (pv/from-array (apply array (range large-size)))
           
           cljs-first-time (benchmark iterations #(first cljs-v))
-          native-first-time (benchmark iterations #(first native-v))
+          ;; Use native-first which directly calls native .first() method
+          native-first-time (benchmark iterations #(pv/native-first native-v))
           ;; Use peek for efficient last-element access (O(1) for both)
           cljs-peek-time (benchmark iterations #(peek cljs-v))
           native-peek-time (benchmark iterations #(peek native-v))]

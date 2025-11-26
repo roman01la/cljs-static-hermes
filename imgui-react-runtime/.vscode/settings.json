@@ -42,6 +42,10 @@
     "queue": "cpp",
     "ratio": "cpp",
     "stack": "cpp",
-    "streambuf": "cpp"
+    "streambuf": "cpp",
+    "__bit_reference": "cpp",
+    "__locale": "cpp",
+    "cstdarg": "cpp",
+    "mutex": "cpp"
   }
 }
