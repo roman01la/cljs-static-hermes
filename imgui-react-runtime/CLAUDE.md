@@ -66,7 +66,11 @@ guireact/
 │   ├── jslib-unit/              # Event loop and runtime polyfills
 │   ├── imgui-unit/              # ImGui FFI bindings and renderer
 │   ├── imgui-runtime/           # C++ runtime infrastructure
-│   └── react-imgui-reconciler/  # Custom React reconciler
+│   ├── react-imgui-reconciler/  # Custom React reconciler
+│   └── native/                  # Native ClojureScript data structures
+│       ├── immer/               # Immer library headers (persistent data structures)
+│       ├── PersistentVector.h   # Persistent vector JSI bindings header
+│       └── PersistentVector.cpp # Persistent vector implementation
 ├── examples/                    # Example applications
 │   └── showcase/                # Main showcase application
 │       ├── *.jsx                # React application components
@@ -532,6 +536,42 @@ function renderNode(node) {
 - Fixed `commitUpdate` parameter order mismatch (was causing props to be lost on re-renders)
 - Correct parameter signature: `commitUpdate(instance, type, oldProps, newProps, internalHandle)`
 - Fixed release build path issue for react-unit-bundle.js compilation
+
+## Native Persistent Data Structures
+
+The project includes native persistent data structures implemented using the [Immer C++ library](https://github.com/arximboldi/immer), exposed to JavaScript via Hermes JSI bindings. These provide efficient structural sharing for ClojureScript applications.
+
+### PersistentVector
+
+A persistent vector implementation using `immer::flex_vector`:
+
+```javascript
+// Create empty vector
+const v1 = PersistentVector.empty();
+
+// Create from array
+const v2 = PersistentVector.from([1, 2, 3]);
+
+// Operations (all return new vectors - immutable!)
+const v3 = v2.conj(4);       // [1, 2, 3, 4]
+const v4 = v3.pop();         // [1, 2, 3]
+const v5 = v2.assoc(1, 10);  // [1, 10, 3]
+
+// Access
+v2.count();    // 3
+v2.nth(0);     // 1
+v2.first();    // 1
+v2.last();     // 3
+v2.empty();    // false
+v2.toArray();  // [1, 2, 3]
+```
+
+**Implementation Notes:**
+- Uses `immer::flex_vector` for efficient `push_back`, `take`, and random access
+- Values are stored as `shared_ptr<jsi::Value>` for proper memory management
+- All mutating operations return new PersistentVector instances (structural sharing)
+- JavaScript objects stored in vectors are referenced, not deep-copied
+- The library is installed automatically via `cljs::installPersistentVector()` in imgui-runtime
 
 ## Architecture Benefits
 
