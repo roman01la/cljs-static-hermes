@@ -337,8 +337,9 @@
     ;; ========================================
     ;; Benchmark 8: first/last
     ;; ========================================
-    (print-section "Benchmark 8: first and last")
-    (println (str "  Getting first/last from vector of size " large-size))
+    (print-section "Benchmark 8: first and last (using peek for last)")
+    (println (str "  Getting first/peek from vector of size " large-size))
+    (println "  Note: Using 'peek' instead of 'last' for efficient last-element access")
     (println "")
     
     (let [cljs-v (vec (range large-size))
@@ -346,17 +347,18 @@
           
           cljs-first-time (benchmark iterations #(first cljs-v))
           native-first-time (benchmark iterations #(first native-v))
-          cljs-last-time (benchmark iterations #(last cljs-v))
-          native-last-time (benchmark iterations #(last native-v))]
+          ;; Use peek for efficient last-element access (O(1) for both)
+          cljs-peek-time (benchmark iterations #(peek cljs-v))
+          native-peek-time (benchmark iterations #(peek native-v))]
       (println "  first:")
       (println (str "    CLJS vector:   " (format-time cljs-first-time)))
       (println (str "    Native vector: " (format-time native-first-time)))
       (println (str "    Ratio: " (.toFixed (/ cljs-first-time native-first-time) 2) "x"))
       (println "")
-      (println "  last:")
-      (println (str "    CLJS vector:   " (format-time cljs-last-time)))
-      (println (str "    Native vector: " (format-time native-last-time)))
-      (println (str "    Ratio: " (.toFixed (/ cljs-last-time native-last-time) 2) "x")))
+      (println "  peek (last element):")
+      (println (str "    CLJS vector:   " (format-time cljs-peek-time)))
+      (println (str "    Native vector: " (format-time native-peek-time)))
+      (println (str "    Ratio: " (.toFixed (/ cljs-peek-time native-peek-time) 2) "x")))
     
     ;; ========================================
     ;; Benchmark 9: Large vector operations
