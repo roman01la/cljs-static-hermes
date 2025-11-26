@@ -7,4 +7,11 @@
         :js-options {:js-provider :import}
         :runtime :custom
         :devtools {:client-ns hermes.repl.client
-                   :preloads [uix.preload]}}}}
+                   :preloads [uix.preload]}}
+  :persistent-vector-example
+       {:target :esm
+        :output-dir "imgui-react-runtime/examples/persistent-vector-demo/cljs-out"
+        :modules {:main {:entries [hermes.persistent-vector-example]
+                         :init-fn hermes.persistent-vector-example/init}}
+        :js-options {:js-provider :import}
+        :runtime :custom}}}
