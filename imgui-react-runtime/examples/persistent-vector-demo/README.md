@@ -5,6 +5,7 @@ This directory contains demos for the native PersistentVector functionality.
 ## C++ Demo (main.cpp)
 
 A standalone C++ console application demonstrating the `PersistentVector` via JavaScript.
+Can also load and run compiled ClojureScript benchmarks.
 
 ### Building
 
@@ -18,10 +19,37 @@ cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -G Ninja
 cmake --build cmake-build-debug --target persistent-vector-demo
 ```
 
-### Running
+### Running Built-in Demo
 
 ```bash
 ./cmake-build-debug/examples/persistent-vector-demo/persistent-vector-demo
+```
+
+### Running ClojureScript Benchmark
+
+First, compile the ClojureScript example (from project root):
+
+```bash
+npx shadow-cljs release persistent-vector-example
+```
+
+Then run with the compiled bundle:
+
+```bash
+./cmake-build-debug/examples/persistent-vector-demo/persistent-vector-demo \
+  cljs-out/main.js
+```
+
+### Command Line Options
+
+```
+Usage: persistent-vector-demo [options] [bundle.js]
+
+Options:
+  --help, -h    Show help message
+
+If no bundle is provided, runs the built-in JavaScript demo.
+If a bundle path is provided, loads and executes that ClojureScript bundle.
 ```
 
 ## ClojureScript Demo
@@ -31,7 +59,7 @@ A ClojureScript example showing how to use the native PersistentVector with Cloj
 ### Files
 
 - `src/hermes/persistent_vector.cljs` - Protocol implementations wrapper
-- `src/hermes/persistent_vector_example.cljs` - Example program
+- `src/hermes/persistent_vector_example.cljs` - Example program with benchmarks
 
 ### Building
 
@@ -39,8 +67,10 @@ From the project root:
 
 ```bash
 # Build the ClojureScript example
-clojure -M -m shadow.cljs.devtools.cli release persistent-vector-example
+npx shadow-cljs release persistent-vector-example
 ```
+
+The compiled output will be in `imgui-react-runtime/examples/persistent-vector-demo/cljs-out/main.js`.
 
 ### Features Demonstrated
 
@@ -51,6 +81,7 @@ clojure -M -m shadow.cljs.devtools.cli release persistent-vector-example
 5. **Chaining** - Operations can be chained for fluent API
 6. **Structural sharing** - Multiple vectors efficiently share structure
 7. **Error handling** - Proper exceptions for out-of-bounds access
+8. **Performance benchmarks** - Comparing native vs CLJS vector performance
 
 ## ClojureScript Protocol Support
 

@@ -7,6 +7,12 @@
  *
  * A standalone console application demonstrating the PersistentVector
  * functionality without any GUI dependencies.
+ * 
+ * Can also load and run compiled ClojureScript benchmarks.
+ * 
+ * Usage:
+ *   ./persistent-vector-demo              # Run built-in JS demo
+ *   ./persistent-vector-demo <bundle.js>  # Run compiled ClojureScript bundle
  */
 
 #include <hermes/hermes.h>
@@ -14,10 +20,13 @@
 
 #include "PersistentVector.h"
 
+#include <chrono>
 #include <climits>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 // JavaScript code that demonstrates PersistentVector operations
@@ -119,21 +128,24 @@ try {
 console.log("\n=== Demo Complete ===");
 )JS";
 
-int main(int argc, char *argv[]) {
-  std::cout << "Initializing Hermes runtime...\n" << std::endl;
+// Read file contents into a string
+std::string readFile(const char *path) {
+  std::ifstream file(path);
+  if (!file.is_open()) {
+    throw std::runtime_error(std::string("Failed to open file: ") + path);
+  }
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  return buffer.str();
+}
 
-  // Create Hermes runtime
-  auto runtimeConfig = ::hermes::vm::RuntimeConfig::Builder()
-                           .withES6BlockScoping(true)
-                           .build();
-  auto runtime = facebook::hermes::makeHermesRuntime(runtimeConfig);
-
-  // Install console.log for output
-  auto console = facebook::jsi::Object(*runtime);
+// Install console object with log function
+void installConsole(facebook::jsi::Runtime &runtime) {
+  auto console = facebook::jsi::Object(runtime);
   console.setProperty(
-      *runtime, "log",
+      runtime, "log",
       facebook::jsi::Function::createFromHostFunction(
-          *runtime, facebook::jsi::PropNameID::forAscii(*runtime, "log"), 0,
+          runtime, facebook::jsi::PropNameID::forAscii(runtime, "log"), 0,
           [](facebook::jsi::Runtime &rt, const facebook::jsi::Value &,
              const facebook::jsi::Value *args,
              size_t count) -> facebook::jsi::Value {
@@ -163,16 +175,95 @@ int main(int argc, char *argv[]) {
             std::cout << std::endl;
             return facebook::jsi::Value::undefined();
           }));
-  runtime->global().setProperty(*runtime, "console", console);
+  runtime.global().setProperty(runtime, "console", console);
+}
+
+// Install performance.now() for benchmarking
+void installPerformance(facebook::jsi::Runtime &runtime) {
+  auto performance = facebook::jsi::Object(runtime);
+  performance.setProperty(
+      runtime, "now",
+      facebook::jsi::Function::createFromHostFunction(
+          runtime, facebook::jsi::PropNameID::forAscii(runtime, "now"), 0,
+          [](facebook::jsi::Runtime &, const facebook::jsi::Value &,
+             const facebook::jsi::Value *,
+             size_t) -> facebook::jsi::Value {
+            auto now = std::chrono::high_resolution_clock::now();
+            auto duration = now.time_since_epoch();
+            auto millis = std::chrono::duration<double, std::milli>(duration).count();
+            return facebook::jsi::Value(millis);
+          }));
+  runtime.global().setProperty(runtime, "performance", performance);
+}
+
+void printUsage(const char *programName) {
+  std::cout << "Usage: " << programName << " [options] [bundle.js]\n"
+            << "\n"
+            << "Options:\n"
+            << "  --help, -h    Show this help message\n"
+            << "\n"
+            << "If no bundle is provided, runs the built-in JavaScript demo.\n"
+            << "If a bundle path is provided, loads and executes that ClojureScript bundle.\n"
+            << "\n"
+            << "Example:\n"
+            << "  " << programName << "                           # Run built-in demo\n"
+            << "  " << programName << " cljs-out/main.js          # Run ClojureScript bundle\n";
+}
+
+int main(int argc, char *argv[]) {
+  const char *bundlePath = nullptr;
+
+  // Parse command line arguments
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == "--help" || arg == "-h") {
+      printUsage(argv[0]);
+      return 0;
+    } else if (arg[0] != '-') {
+      if (bundlePath != nullptr) {
+        std::cerr << "Error: Multiple bundle files specified\n";
+        printUsage(argv[0]);
+        return 1;
+      }
+      bundlePath = argv[i];
+    } else {
+      std::cerr << "Unknown option: " << arg << std::endl;
+      printUsage(argv[0]);
+      return 1;
+    }
+  }
+
+  std::cout << "Initializing Hermes runtime...\n" << std::endl;
+
+  // Create Hermes runtime
+  auto runtimeConfig = ::hermes::vm::RuntimeConfig::Builder()
+                           .withES6BlockScoping(true)
+                           .build();
+  auto runtime = facebook::hermes::makeHermesRuntime(runtimeConfig);
+
+  // Install console.log for output
+  installConsole(*runtime);
+
+  // Install performance.now() for benchmarking
+  installPerformance(*runtime);
 
   // Install PersistentVector
   cljs::installPersistentVector(*runtime);
 
-  // Run the demo script
   try {
-    runtime->evaluateJavaScript(
-        std::make_shared<facebook::jsi::StringBuffer>(kDemoScript),
-        "persistent-vector-demo.js");
+    if (bundlePath) {
+      // Load and run the ClojureScript bundle
+      std::cout << "Loading ClojureScript bundle: " << bundlePath << "\n" << std::endl;
+      std::string bundleCode = readFile(bundlePath);
+      runtime->evaluateJavaScript(
+          std::make_shared<facebook::jsi::StringBuffer>(bundleCode),
+          bundlePath);
+    } else {
+      // Run the built-in demo script
+      runtime->evaluateJavaScript(
+          std::make_shared<facebook::jsi::StringBuffer>(kDemoScript),
+          "persistent-vector-demo.js");
+    }
   } catch (const facebook::jsi::JSError &e) {
     std::cerr << "JavaScript error: " << e.getStack() << std::endl;
     return 1;
