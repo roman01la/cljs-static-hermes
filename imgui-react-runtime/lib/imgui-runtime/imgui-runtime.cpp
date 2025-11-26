@@ -4,6 +4,7 @@
 
 #include "imgui-runtime.h"
 #include "WebSocketSupport.h"
+#include "PersistentVector.h"
 
 #include "sokol_app.h"
 #include "sokol_gfx.h"
@@ -442,6 +443,9 @@ sapp_desc sokol_main(int argc, char *argv[])
                       helpers.getPropertyAsFunction(*hermes, "flushRaf"));
 
     initializeWebSocketSupport(*s_hermesApp->hermes);
+
+    // Install ClojureScript native data structures
+    cljs::installPersistentVector(*s_hermesApp->hermes);
 
     // Initialize jslib's current time
     double curTimeMs = stm_ms(stm_now());
