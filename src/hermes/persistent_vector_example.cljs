@@ -2,12 +2,33 @@
   "Example program demonstrating native PersistentVector with ClojureScript protocols.
 
    This example shows how the native C++ persistent vector can be used seamlessly
-   with standard ClojureScript functions through protocol implementations."
+   with standard ClojureScript functions through protocol implementations.
+   
+   Also includes benchmarks comparing native vector vs ClojureScript vector performance."
   (:require [hermes.persistent-vector :as pv]))
 
 (defn print-section [title]
   (println)
   (println (str "=== " title " ===")))
+
+;; Benchmarking utilities
+(defn now-ms []
+  "Returns current time in milliseconds."
+  (js/performance.now))
+
+(defn benchmark
+  "Run f n times and return elapsed time in ms."
+  [n f]
+  (let [start (now-ms)]
+    (dotimes [_ n]
+      (f))
+    (- (now-ms) start)))
+
+(defn format-time [ms]
+  "Format milliseconds nicely."
+  (if (< ms 1)
+    (str (.toFixed (* ms 1000) 2) "µs")
+    (str (.toFixed ms 2) "ms")))
 
 (defn run-examples []
   (println "")
@@ -171,6 +192,220 @@
   (println "╚════════════════════════════════════════════════════════════════╝")
   (println ""))
 
+(defn run-benchmarks []
+  (println "")
+  (println "╔════════════════════════════════════════════════════════════════╗")
+  (println "║     Performance Benchmarks: Native Vector vs CLJS Vector      ║")
+  (println "╚════════════════════════════════════════════════════════════════╝")
+  (println "")
+  (println "Running benchmarks... (this may take a moment)")
+  (println "")
+  
+  (let [iterations 10000
+        small-size 10
+        medium-size 100
+        large-size 1000]
+    
+    ;; ========================================
+    ;; Benchmark 1: Vector Creation
+    ;; ========================================
+    (print-section "Benchmark 1: Vector Creation")
+    (println (str "  Creating vectors with " small-size " elements, " iterations " iterations"))
+    (println "")
+    
+    (let [js-arr (apply array (range small-size))
+          
+          cljs-time (benchmark iterations #(vec (range small-size)))
+          native-time (benchmark iterations #(pv/from-array js-arr))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 2: conj (append) operations
+    ;; ========================================
+    (print-section "Benchmark 2: conj (append) - Sequential")
+    (println (str "  Appending " medium-size " elements one at a time"))
+    (println "")
+    
+    (let [cljs-time (benchmark 100
+                      #(loop [v [] i 0]
+                         (if (< i medium-size)
+                           (recur (conj v i) (inc i))
+                           v)))
+          native-time (benchmark 100
+                        #(loop [v (pv/empty-vector) i 0]
+                           (if (< i medium-size)
+                             (recur (conj v i) (inc i))
+                             v)))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 3: nth (random access)
+    ;; ========================================
+    (print-section "Benchmark 3: nth (random access)")
+    (println (str "  Accessing random elements from vector of size " large-size))
+    (println "")
+    
+    (let [cljs-v (vec (range large-size))
+          native-v (pv/from-array (apply array (range large-size)))
+          ;; Pre-generate indices as a vector for consistent memory usage
+          indices (vec (repeatedly iterations #(rand-int large-size)))
+          
+          cljs-time (benchmark 1 #(doseq [i indices] (nth cljs-v i)))
+          native-time (benchmark 1 #(doseq [i indices] (nth native-v i)))]
+      (println (str "  CLJS vector:   " (format-time cljs-time) " (" iterations " accesses)"))
+      (println (str "  Native vector: " (format-time native-time) " (" iterations " accesses)"))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 4: count
+    ;; ========================================
+    (print-section "Benchmark 4: count")
+    (println (str "  Getting count of vector with " large-size " elements"))
+    (println "")
+    
+    (let [cljs-v (vec (range large-size))
+          native-v (pv/from-array (apply array (range large-size)))
+          
+          cljs-time (benchmark iterations #(count cljs-v))
+          native-time (benchmark iterations #(count native-v))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 5: pop
+    ;; ========================================
+    (print-section "Benchmark 5: pop (remove last)")
+    (println (str "  Popping " medium-size " elements one at a time"))
+    (println "")
+    
+    (let [cljs-base (vec (range medium-size))
+          native-base (pv/from-array (apply array (range medium-size)))
+          
+          cljs-time (benchmark 100
+                      #(loop [v cljs-base]
+                         (if (pos? (count v))
+                           (recur (pop v))
+                           v)))
+          native-time (benchmark 100
+                        #(loop [v native-base]
+                           (if (pos? (count v))
+                             (recur (pop v))
+                             v)))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 6: assoc (update)
+    ;; ========================================
+    (print-section "Benchmark 6: assoc (update at index)")
+    (println (str "  Updating random indices in vector of size " medium-size))
+    (println "")
+    
+    (let [cljs-v (vec (range medium-size))
+          native-v (pv/from-array (apply array (range medium-size)))
+          ;; Pre-generate random indices to avoid timing overhead
+          indices (vec (repeatedly iterations #(rand-int medium-size)))
+          
+          cljs-time (benchmark 1 #(doseq [i indices] (assoc cljs-v i :updated)))
+          native-time (benchmark 1 #(doseq [i indices] (assoc native-v i :updated)))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 7: reduce (iteration)
+    ;; ========================================
+    (print-section "Benchmark 7: reduce (sum all elements)")
+    (println (str "  Summing vector with " large-size " elements"))
+    (println "")
+    
+    (let [cljs-v (vec (range large-size))
+          native-v (pv/from-array (apply array (range large-size)))
+          
+          cljs-time (benchmark 1000 #(reduce + 0 cljs-v))
+          native-time (benchmark 1000 #(reduce + 0 native-v))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 8: first/last
+    ;; ========================================
+    (print-section "Benchmark 8: first and last")
+    (println (str "  Getting first/last from vector of size " large-size))
+    (println "")
+    
+    (let [cljs-v (vec (range large-size))
+          native-v (pv/from-array (apply array (range large-size)))
+          
+          cljs-first-time (benchmark iterations #(first cljs-v))
+          native-first-time (benchmark iterations #(first native-v))
+          cljs-last-time (benchmark iterations #(last cljs-v))
+          native-last-time (benchmark iterations #(last native-v))]
+      (println "  first:")
+      (println (str "    CLJS vector:   " (format-time cljs-first-time)))
+      (println (str "    Native vector: " (format-time native-first-time)))
+      (println (str "    Ratio: " (.toFixed (/ cljs-first-time native-first-time) 2) "x"))
+      (println "")
+      (println "  last:")
+      (println (str "    CLJS vector:   " (format-time cljs-last-time)))
+      (println (str "    Native vector: " (format-time native-last-time)))
+      (println (str "    Ratio: " (.toFixed (/ cljs-last-time native-last-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 9: Large vector operations
+    ;; ========================================
+    (print-section "Benchmark 9: Large Vector - Mixed Operations")
+    (println (str "  Building then querying vector with " large-size " elements"))
+    (println "")
+    
+    (let [build-and-query-cljs 
+          (fn []
+            (let [v (loop [v [] i 0]
+                      (if (< i large-size)
+                        (recur (conj v i) (inc i))
+                        v))]
+              ;; Query phase
+              (dotimes [_ 100]
+                (nth v (rand-int large-size))
+                (count v))))
+          
+          build-and-query-native
+          (fn []
+            (let [v (loop [v (pv/empty-vector) i 0]
+                      (if (< i large-size)
+                        (recur (conj v i) (inc i))
+                        v))]
+              ;; Query phase  
+              (dotimes [_ 100]
+                (nth v (rand-int large-size))
+                (count v))))
+          
+          cljs-time (benchmark 10 build-and-query-cljs)
+          native-time (benchmark 10 build-and-query-native)]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x"))))
+  
+  (println "")
+  (println "╔════════════════════════════════════════════════════════════════╗")
+  (println "║                    Benchmarks Complete!                        ║")
+  (println "║                                                                ║")
+  (println "║  Note: Ratio > 1 means Native is faster                        ║")
+  (println "║        Ratio < 1 means CLJS is faster                          ║")
+  (println "║                                                                ║")
+  (println "║  Results may vary based on vector size, operation mix,         ║")
+  (println "║  and runtime environment.                                      ║")
+  (println "╚════════════════════════════════════════════════════════════════╝")
+  (println ""))
+
 ;; Entry point
 (defn init []
-  (run-examples))
+  (run-examples)
+  (run-benchmarks))
