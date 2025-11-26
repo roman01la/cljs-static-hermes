@@ -50,7 +50,8 @@
                                   ^:mutable -cached-assoc
                                   ^:mutable -cached-first
                                   ^:mutable -cached-last
-                                  ^:mutable -cached-toArray]
+                                  ^:mutable -cached-toArray
+                                  ^:mutable -cached-empty]
   Object
   (toString [_]
     (let [to-arr (or -cached-toArray
@@ -93,11 +94,13 @@
   (-conj [_ v]
     (let [conj-fn (or -cached-conj
                       (set! -cached-conj (.-conj native)))]
-      (NativePersistentVector. (.call conj-fn native v) nil nil nil nil nil nil nil nil)))
+      (NativePersistentVector. (.call conj-fn native v) nil nil nil nil nil nil nil nil nil)))
 
   IEmptyableCollection
   (-empty [_]
-    (NativePersistentVector. (.empty native-factory) nil nil nil nil nil nil nil nil))
+    (let [empty-fn (or -cached-empty
+                       (set! -cached-empty (.-empty native-factory)))]
+      (NativePersistentVector. (.call empty-fn native-factory) nil nil nil nil nil nil nil nil nil)))
 
   IStack
   (-peek [_]
@@ -110,7 +113,7 @@
   (-pop [_]
     (let [pop-fn (or -cached-pop
                      (set! -cached-pop (.-pop native)))]
-      (NativePersistentVector. (.call pop-fn native) nil nil nil nil nil nil nil nil)))
+      (NativePersistentVector. (.call pop-fn native) nil nil nil nil nil nil nil nil nil)))
 
   ISeqable
   (-seq [this]
@@ -187,7 +190,7 @@
       (if (and (number? k) (>= k 0) (< k (.call cnt native)))
         (let [assoc-fn (or -cached-assoc
                            (set! -cached-assoc (.-assoc native)))]
-          (NativePersistentVector. (.call assoc-fn native k v) nil nil nil nil nil nil nil nil))
+          (NativePersistentVector. (.call assoc-fn native k v) nil nil nil nil nil nil nil nil nil))
         (throw (js/Error. (str "Index " k " out of bounds for vector of size " (.call cnt native)))))))
   (-contains-key? [_ k]
     (let [cnt (or -cached-count
@@ -210,7 +213,7 @@
       (if (and (>= n 0) (< n (.call cnt native)))
         (let [assoc-fn (or -cached-assoc
                            (set! -cached-assoc (.-assoc native)))]
-          (NativePersistentVector. (.call assoc-fn native n val) nil nil nil nil nil nil nil nil))
+          (NativePersistentVector. (.call assoc-fn native n val) nil nil nil nil nil nil nil nil nil))
         (throw (js/Error. (str "Index " n " out of bounds for vector of size " (.call cnt native)))))))
 
   IFn
@@ -224,17 +227,39 @@
     (-write writer "#hermes/pvec ")
     (-write writer (str this))))
 
+;; Extend first to use native .first() method for NativePersistentVector
+;; This avoids the overhead of going through ISeqable
+(extend-type NativePersistentVector
+  INext
+  (-next [this]
+    (let [cnt (.-count (.-native this))
+          n (.call cnt (.-native this))]
+      (when (> n 1)
+        ;; Return rest of the seq from toArray
+        (let [to-arr (.-toArray (.-native this))
+              arr (.call to-arr (.-native this))]
+          (next (seq arr)))))))
+
+;; Override first for NativePersistentVector to use native .first() directly
+(defn native-first
+  "Fast first for native vectors - uses native .first() method."
+  [v]
+  (when (instance? NativePersistentVector v)
+    (let [native (.-native v)
+          first-fn (.-first native)]
+      (.call first-fn native))))
+
 ;; Factory functions
 
 (defn empty-vector
   "Returns an empty native persistent vector."
   []
-  (NativePersistentVector. (.empty native-factory) nil nil nil nil nil nil nil nil))
+  (NativePersistentVector. (.empty native-factory) nil nil nil nil nil nil nil nil nil))
 
 (defn from-array
   "Creates a native persistent vector from a JavaScript array."
   [arr]
-  (NativePersistentVector. (.from native-factory arr) nil nil nil nil nil nil nil nil))
+  (NativePersistentVector. (.from native-factory arr) nil nil nil nil nil nil nil nil nil))
 
 (defn vector
   "Creates a native persistent vector containing the given values."
