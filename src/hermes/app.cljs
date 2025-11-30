@@ -60,7 +60,7 @@
                   (set-by #(update-ball % vy content-height))
                   (reset! id (js/requestAnimationFrame render))))))
           #(js/cancelAnimationFrame @id)))
-      [])
+      [content-height content-width border-thickness ball-radius])
 
     ($ :window {:title "Bouncing Ball"
                 :default-x 600

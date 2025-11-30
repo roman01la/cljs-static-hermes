@@ -2,4 +2,5 @@ node_modules
 .cpcache/
 .idea/
 .shadow-cljs/
+imgui-react-runtime/examples/persistent-vector-demo/cljs-out/
 imgui-react-runtime/examples/uix/out

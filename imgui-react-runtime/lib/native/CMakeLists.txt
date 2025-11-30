@@ -8,6 +8,8 @@
 add_library(native-cljs
     PersistentVector.cpp
     PersistentVector.h
+    PersistentMap.cpp
+    PersistentMap.h
 )
 
 # Include Immer headers (header-only library)

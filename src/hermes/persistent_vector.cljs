@@ -25,6 +25,7 @@
 
    The native vector provides O(log n) structural sharing for efficient
    persistent operations, backed by the Immer C++ library."
+  (:refer-clojure :exclude [vector])
   (:require [clojure.string :as str]))
 
 ;; Access the native PersistentVector factory from the global scope
@@ -33,98 +34,57 @@
 ;; Helper to check if something is a native persistent vector
 (defn native-vector?
   "Returns true if x is a native PersistentVector."
-  [^js x]
-  (and (some? x)
-       (fn? (.-count x))
-       (fn? (.-nth x))
-       (fn? (.-conj x))
-       (fn? (.-pop x))))
+  [x]
+  (instance? js/PersistentVector x))
 
 ;; Wrapper type that implements ClojureScript protocols
-;; We cache method references to avoid repeated JSI property lookups
-(deftype NativePersistentVector [^js native
-                                  ^:mutable -cached-count
-                                  ^:mutable -cached-nth
-                                  ^:mutable -cached-conj
-                                  ^:mutable -cached-pop
-                                  ^:mutable -cached-assoc
-                                  ^:mutable -cached-first
-                                  ^:mutable -cached-last
-                                  ^:mutable -cached-toArray
-                                  ^:mutable -cached-empty]
+(deftype NativePersistentVector [v cnt meta]
   Object
   (toString [_]
-    (let [to-arr (or -cached-toArray
-                     (set! -cached-toArray (.-toArray native)))]
-      (str "[" (str/join " " (.call to-arr native)) "]")))
+    (str "[" (str/join " " (.toArray native-factory v)) "]"))
+  (equiv [this other]
+    (-equiv this other))
 
   ICounted
   (-count [_]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (.call cnt native)))
+    cnt)
 
   IIndexed
   (-nth [this n]
-    (let [nth-fn (or -cached-nth
-                     (set! -cached-nth (.-nth native)))]
-      (.call nth-fn native n)))
+    (.nth native-factory v n))
   (-nth [this n not-found]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (if (and (>= n 0) (< n (.call cnt native)))
-        (let [nth-fn (or -cached-nth
-                         (set! -cached-nth (.-nth native)))]
-          (.call nth-fn native n))
-        not-found)))
+    (if (and (>= n 0) (< n cnt))
+      (-nth this n)
+      not-found))
 
   ILookup
   (-lookup [this k]
     (-lookup this k nil))
   (-lookup [this k not-found]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (if (and (number? k) (>= k 0) (< k (.call cnt native)))
-        (let [nth-fn (or -cached-nth
-                         (set! -cached-nth (.-nth native)))]
-          (.call nth-fn native k))
-        not-found)))
+    (if (and (number? k) (>= k 0) (< k cnt))
+      (-nth this k)
+      not-found))
 
   ICollection
-  (-conj [_ v]
-    (let [conj-fn (or -cached-conj
-                      (set! -cached-conj (.-conj native)))]
-      (NativePersistentVector. (.call conj-fn native v) nil nil nil nil nil nil nil nil nil)))
+  (-conj [_ elem]
+    (NativePersistentVector. (.conj native-factory v elem) nil meta))
 
   IEmptyableCollection
   (-empty [_]
-    (let [empty-fn (or -cached-empty
-                       (set! -cached-empty (.-empty native-factory)))]
-      (NativePersistentVector. (.call empty-fn native-factory) nil nil nil nil nil nil nil nil nil)))
+    (NativePersistentVector. (.empty native-factory) 0 nil))
 
   IStack
-  (-peek [_]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (when (pos? (.call cnt native))
-        (let [last-fn (or -cached-last
-                          (set! -cached-last (.-last native)))]
-          (.call last-fn native)))))
+  (-peek [this]
+    (when (pos? cnt)
+      (.last native-factory v)))
   (-pop [_]
-    (let [pop-fn (or -cached-pop
-                     (set! -cached-pop (.-pop native)))]
-      (NativePersistentVector. (.call pop-fn native) nil nil nil nil nil nil nil nil nil)))
+    (NativePersistentVector. (.pop native-factory v) (dec cnt) meta))
 
   ISeqable
   (-seq [this]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))
-          n (.call cnt native)]
-      (when (pos? n)
-        ;; Use native toArray for efficient seq conversion
-        (let [to-arr (or -cached-toArray
-                         (set! -cached-toArray (.-toArray native)))]
-          (seq (.call to-arr native))))))
+    (when (pos? cnt)
+      ;; Use native toArray for efficient seq conversion
+      (seq (.toArray native-factory v))))
 
   ISequential
 
@@ -132,11 +92,7 @@
   (-equiv [this other]
     (cond
       (instance? NativePersistentVector other)
-      (let [to-arr (or -cached-toArray
-                       (set! -cached-toArray (.-toArray native)))
-            other-native (.-native ^js other)
-            other-to-arr (.-toArray ^js other-native)]
-        (= (.call to-arr native) (.call other-to-arr other-native)))
+      (.equiv native-factory v (.-v other))
 
       (sequential? other)
       (= (seq this) (seq other))
@@ -149,117 +105,75 @@
 
   IReduce
   (-reduce [this f]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))
-          n (.call cnt native)]
-      (if (zero? n)
-        (f)
-        ;; Use toArray for efficient iteration instead of repeated nth calls
-        (let [to-arr (or -cached-toArray
-                         (set! -cached-toArray (.-toArray native)))
-              arr (.call to-arr native)]
-          (loop [i 1
-                 acc (aget arr 0)]
-            (if (< i n)
-              (let [result (f acc (aget arr i))]
-                (if (reduced? result)
-                  @result
-                  (recur (inc i) result)))
-              acc))))))
+    (.reduce native-factory v #(f %1 %2) nil))
   (-reduce [this f init]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))
-          n (.call cnt native)]
-      ;; Use toArray for efficient iteration
-      (let [to-arr (or -cached-toArray
-                       (set! -cached-toArray (.-toArray native)))
-            arr (.call to-arr native)]
-        (loop [i 0
-               acc init]
-          (if (< i n)
-            (let [result (f acc (aget arr i))]
-              (if (reduced? result)
-                @result
-                (recur (inc i) result)))
-            acc)))))
+    (.reduce native-factory v #(f %1 %2) init))
 
   IAssociative
-  (-assoc [_ k v]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (if (and (number? k) (>= k 0) (< k (.call cnt native)))
-        (let [assoc-fn (or -cached-assoc
-                           (set! -cached-assoc (.-assoc native)))]
-          (NativePersistentVector. (.call assoc-fn native k v) nil nil nil nil nil nil nil nil nil))
-        (throw (js/Error. (str "Index " k " out of bounds for vector of size " (.call cnt native)))))))
-  (-contains-key? [_ k]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (and (number? k) (>= k 0) (< k (.call cnt native)))))
+  (-assoc [this k val]
+    (NativePersistentVector. (.assoc native-factory v k val) cnt meta))
+  (-contains-key? [this k]
+    (and (integer? k) (>= k 0) (< k cnt)))
 
   IFind
   (-find [this k]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (when (and (number? k) (>= k 0) (< k (.call cnt native)))
-        (let [nth-fn (or -cached-nth
-                         (set! -cached-nth (.-nth native)))]
-          (cljs.core/MapEntry. k (.call nth-fn native k) nil)))))
+    (when (and (>= k 0) (< k cnt))
+      (cljs.core/MapEntry. k (-nth this k) nil)))
 
+  INext
+  (-next [this]
+    (when (> cnt 1)
+      ;; Return rest of the seq from toArray
+      (next (seq (.toArray native-factory (.-v this))))))
+
+  APersistentVector
   IVector
-  (-assoc-n [_ n val]
-    (let [cnt (or -cached-count
-                  (set! -cached-count (.-count native)))]
-      (if (and (>= n 0) (< n (.call cnt native)))
-        (let [assoc-fn (or -cached-assoc
-                           (set! -cached-assoc (.-assoc native)))]
-          (NativePersistentVector. (.call assoc-fn native n val) nil nil nil nil nil nil nil nil nil))
-        (throw (js/Error. (str "Index " n " out of bounds for vector of size " (.call cnt native)))))))
+  (-assoc-n [this n val]
+    (NativePersistentVector. (.assoc native-factory v n val) cnt meta))
 
   IFn
-  (-invoke [this k]
-    (-nth this k))
-  (-invoke [this k not-found]
-    (-nth this k not-found))
+  (-invoke [coll k]
+    (if (number? k)
+      (-nth coll k)
+      (throw (js/Error. "Key must be integer"))))
+
+  IMeta
+  (-meta [_]
+    meta)
+
+  IWithMeta
+  (-with-meta [this new-meta]
+    (if (identical? new-meta meta)
+      this
+      (NativePersistentVector. v cnt new-meta)))
+
+  ICloneable
+  (-clone [_] (NativePersistentVector. v cnt meta))
+
+  IDrop
+  (-drop [this n]
+    (if (< n cnt)
+      (let [remaining (- cnt n)]
+        ;; Create a lazy sequence starting from index n
+        (map #(-nth this (+ n %)) (range remaining)))
+      nil))
 
   IPrintWithWriter
   (-pr-writer [this writer opts]
     (-write writer "#hermes/pvec ")
     (-write writer (str this))))
 
-;; Extend first to use native .first() method for NativePersistentVector
-;; This avoids the overhead of going through ISeqable
-(extend-type NativePersistentVector
-  INext
-  (-next [this]
-    (let [cnt (.-count (.-native this))
-          n (.call cnt (.-native this))]
-      (when (> n 1)
-        ;; Return rest of the seq from toArray
-        (let [to-arr (.-toArray ^js (.-native this))
-              arr (.call to-arr (.-native this))]
-          (next (seq arr)))))))
-
-;; Override first for NativePersistentVector to use native .first() directly
-(defn native-first
-  "Fast first for native vectors - uses native .first() method."
-  [v]
-  (when (instance? NativePersistentVector v)
-    (let [native (.-native v)
-          first-fn (.-first native)]
-      (.call first-fn native))))
-
 ;; Factory functions
 
 (defn empty-vector
   "Returns an empty native persistent vector."
   []
-  (NativePersistentVector. (.empty native-factory) nil nil nil nil nil nil nil nil nil))
+  (NativePersistentVector. (.empty native-factory) 0 nil))
 
 (defn from-array
   "Creates a native persistent vector from a JavaScript array."
   [arr]
-  (NativePersistentVector. (.from native-factory arr) nil nil nil nil nil nil nil nil nil))
+  (NativePersistentVector. (.from native-factory arr) (.-length arr) nil))
 
 (defn vector
   "Creates a native persistent vector containing the given values."

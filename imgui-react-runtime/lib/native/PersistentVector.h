@@ -10,47 +10,14 @@
 #include <immer/flex_vector.hpp>
 #include <immer/flex_vector_transient.hpp>
 
+#include "StoredValue.h"
+
 #include <memory>
 #include <string>
 #include <variant>
 
 namespace cljs
 {
-
-  /**
-   * Optimized value storage: primitives are stored directly, objects wrapped in
-   * shared_ptr. This reduces allocation overhead for common cases (numbers,
-   * booleans, strings) while maintaining proper lifecycle for object references.
-   */
-  struct StoredValue
-  {
-    enum Type
-    {
-      NIL,
-      BOOL,
-      NUMBER,
-      STRING,
-      OBJECT_REF
-    } type;
-
-    union
-    {
-      bool bool_val;
-      double number_val;
-    } primitive;
-
-    // Shared pointers for types requiring complex lifecycle management
-    std::shared_ptr<std::string> string_val;
-    std::shared_ptr<facebook::jsi::Object> object_val;
-
-    StoredValue() : type(NIL) {}
-    explicit StoredValue(bool v) : type(BOOL) { primitive.bool_val = v; }
-    explicit StoredValue(double v) : type(NUMBER) { primitive.number_val = v; }
-    explicit StoredValue(std::string s) : type(STRING),
-                                          string_val(std::make_shared<std::string>(std::move(s))) {}
-    explicit StoredValue(std::shared_ptr<facebook::jsi::Object> obj)
-        : type(OBJECT_REF), object_val(std::move(obj)) {}
-  };
 
   /**
    * PersistentVectorHostObject wraps an immer::flex_vector to provide
@@ -96,6 +63,7 @@ namespace cljs
     // Vector operations
     size_t count() const;
     facebook::jsi::Value nth(facebook::jsi::Runtime &rt, size_t index) const;
+    bool equiv(facebook::jsi::Runtime &rt, const facebook::jsi::Value &other) const;
     std::shared_ptr<PersistentVectorHostObject>
     conj(facebook::jsi::Runtime &rt, const facebook::jsi::Value &value) const;
     std::shared_ptr<PersistentVectorHostObject> pop() const;

@@ -7,9 +7,9 @@
  *
  * A standalone console application demonstrating the PersistentVector
  * functionality without any GUI dependencies.
- * 
+ *
  * Can also load and run compiled ClojureScript benchmarks.
- * 
+ *
  * Usage:
  *   ./persistent-vector-demo              # Run built-in JS demo
  *   ./persistent-vector-demo <bundle.js>  # Run compiled ClojureScript bundle
@@ -19,6 +19,7 @@
 #include <jsi/jsi.h>
 
 #include "PersistentVector.h"
+#include "PersistentMap.h"
 
 #include <chrono>
 #include <climits>
@@ -129,9 +130,11 @@ console.log("\n=== Demo Complete ===");
 )JS";
 
 // Read file contents into a string
-std::string readFile(const char *path) {
+std::string readFile(const char *path)
+{
   std::ifstream file(path);
-  if (!file.is_open()) {
+  if (!file.is_open())
+  {
     throw std::runtime_error(std::string("Failed to open file: ") + path);
   }
   std::stringstream buffer;
@@ -140,7 +143,8 @@ std::string readFile(const char *path) {
 }
 
 // Install console object with log function
-void installConsole(facebook::jsi::Runtime &runtime) {
+void installConsole(facebook::jsi::Runtime &runtime)
+{
   auto console = facebook::jsi::Object(runtime);
   console.setProperty(
       runtime, "log",
@@ -148,27 +152,43 @@ void installConsole(facebook::jsi::Runtime &runtime) {
           runtime, facebook::jsi::PropNameID::forAscii(runtime, "log"), 0,
           [](facebook::jsi::Runtime &rt, const facebook::jsi::Value &,
              const facebook::jsi::Value *args,
-             size_t count) -> facebook::jsi::Value {
-            for (size_t i = 0; i < count; ++i) {
+             size_t count) -> facebook::jsi::Value
+          {
+            for (size_t i = 0; i < count; ++i)
+            {
               if (i > 0)
                 std::cout << " ";
-              if (args[i].isString()) {
+              if (args[i].isString())
+              {
                 std::cout << args[i].getString(rt).utf8(rt);
-              } else if (args[i].isNumber()) {
+              }
+              else if (args[i].isNumber())
+              {
                 double num = args[i].getNumber();
                 // Check if number is effectively an integer
-                if (std::floor(num) == num && num >= INT_MIN && num <= INT_MAX) {
+                if (std::floor(num) == num && num >= INT_MIN && num <= INT_MAX)
+                {
                   std::cout << static_cast<int>(num);
-                } else {
+                }
+                else
+                {
                   std::cout << num;
                 }
-              } else if (args[i].isBool()) {
+              }
+              else if (args[i].isBool())
+              {
                 std::cout << (args[i].getBool() ? "true" : "false");
-              } else if (args[i].isNull()) {
+              }
+              else if (args[i].isNull())
+              {
                 std::cout << "null";
-              } else if (args[i].isUndefined()) {
+              }
+              else if (args[i].isUndefined())
+              {
                 std::cout << "undefined";
-              } else if (args[i].isObject()) {
+              }
+              else if (args[i].isObject())
+              {
                 std::cout << "[object]";
               }
             }
@@ -179,7 +199,8 @@ void installConsole(facebook::jsi::Runtime &runtime) {
 }
 
 // Install performance.now() for benchmarking
-void installPerformance(facebook::jsi::Runtime &runtime) {
+void installPerformance(facebook::jsi::Runtime &runtime)
+{
   auto performance = facebook::jsi::Object(runtime);
   performance.setProperty(
       runtime, "now",
@@ -187,7 +208,8 @@ void installPerformance(facebook::jsi::Runtime &runtime) {
           runtime, facebook::jsi::PropNameID::forAscii(runtime, "now"), 0,
           [](facebook::jsi::Runtime &, const facebook::jsi::Value &,
              const facebook::jsi::Value *,
-             size_t) -> facebook::jsi::Value {
+             size_t) -> facebook::jsi::Value
+          {
             auto now = std::chrono::high_resolution_clock::now();
             auto duration = now.time_since_epoch();
             auto millis = std::chrono::duration<double, std::milli>(duration).count();
@@ -196,7 +218,8 @@ void installPerformance(facebook::jsi::Runtime &runtime) {
   runtime.global().setProperty(runtime, "performance", performance);
 }
 
-void printUsage(const char *programName) {
+void printUsage(const char *programName)
+{
   std::cout << "Usage: " << programName << " [options] [bundle.js]\n"
             << "\n"
             << "Options:\n"
@@ -210,30 +233,39 @@ void printUsage(const char *programName) {
             << "  " << programName << " cljs-out/main.js          # Run ClojureScript bundle\n";
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   const char *bundlePath = nullptr;
 
   // Parse command line arguments
-  for (int i = 1; i < argc; ++i) {
+  for (int i = 1; i < argc; ++i)
+  {
     std::string arg = argv[i];
-    if (arg == "--help" || arg == "-h") {
+    if (arg == "--help" || arg == "-h")
+    {
       printUsage(argv[0]);
       return 0;
-    } else if (arg[0] != '-') {
-      if (bundlePath != nullptr) {
+    }
+    else if (arg[0] != '-')
+    {
+      if (bundlePath != nullptr)
+      {
         std::cerr << "Error: Multiple bundle files specified\n";
         printUsage(argv[0]);
         return 1;
       }
       bundlePath = argv[i];
-    } else {
+    }
+    else
+    {
       std::cerr << "Unknown option: " << arg << std::endl;
       printUsage(argv[0]);
       return 1;
     }
   }
 
-  std::cout << "Initializing Hermes runtime...\n" << std::endl;
+  std::cout << "Initializing Hermes runtime...\n"
+            << std::endl;
 
   // Create Hermes runtime
   auto runtimeConfig = ::hermes::vm::RuntimeConfig::Builder()
@@ -249,25 +281,35 @@ int main(int argc, char *argv[]) {
 
   // Install PersistentVector
   cljs::installPersistentVector(*runtime);
+  cljs::installPersistentMap(*runtime);
 
-  try {
-    if (bundlePath) {
+  try
+  {
+    if (bundlePath)
+    {
       // Load and run the ClojureScript bundle
-      std::cout << "Loading ClojureScript bundle: " << bundlePath << "\n" << std::endl;
+      std::cout << "Loading ClojureScript bundle: " << bundlePath << "\n"
+                << std::endl;
       std::string bundleCode = readFile(bundlePath);
       runtime->evaluateJavaScript(
           std::make_shared<facebook::jsi::StringBuffer>(bundleCode),
           bundlePath);
-    } else {
+    }
+    else
+    {
       // Run the built-in demo script
       runtime->evaluateJavaScript(
           std::make_shared<facebook::jsi::StringBuffer>(kDemoScript),
           "persistent-vector-demo.js");
     }
-  } catch (const facebook::jsi::JSError &e) {
+  }
+  catch (const facebook::jsi::JSError &e)
+  {
     std::cerr << "JavaScript error: " << e.getStack() << std::endl;
     return 1;
-  } catch (const std::exception &e) {
+  }
+  catch (const std::exception &e)
+  {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
   }

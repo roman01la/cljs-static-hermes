@@ -5,7 +5,8 @@
    with standard ClojureScript functions through protocol implementations.
    
    Also includes benchmarks comparing native vector vs ClojureScript vector performance."
-  (:require [hermes.persistent-vector :as pv]))
+  (:require [hermes.persistent-vector :as pv]
+            [hermes.persistent-map-example :as pme]))
 
 (defn print-section [title]
   (println)
@@ -64,7 +65,7 @@
   (let [v (pv/vector "hello" "world" "!")]
     (println "  (def v (pv/vector \"hello\" \"world\" \"!\"))")
     (println "  (first v) =>" (first v))
-    (println "  (last v)  =>" (last v)))
+    #_(println "  (last v)  =>" (last v)))
 
   ;; 5. Using conj (ICollection) - persistent operation
   (print-section "5. Using conj (ICollection) - Persistent!")
@@ -335,28 +336,17 @@
       (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
     
     ;; ========================================
-    ;; Benchmark 8: first/last
+    ;; Benchmark 8: peek
     ;; ========================================
-    (print-section "Benchmark 8: first and last (using peek for last)")
-    (println (str "  Getting first/peek from vector of size " large-size))
-    (println "  Note: Using 'peek' instead of 'last' for efficient last-element access")
-    (println "  Note: Using pv/native-first for native vector (avoids seq overhead)")
+    (print-section "Benchmark 8: peek")
+    (println (str "  Getting peek from vector of size " large-size))
     (println "")
     
     (let [cljs-v (vec (range large-size))
           native-v (pv/from-array (apply array (range large-size)))
-          
-          cljs-first-time (benchmark iterations #(first cljs-v))
-          ;; Use native-first which directly calls native .first() method
-          native-first-time (benchmark iterations #(pv/native-first native-v))
           ;; Use peek for efficient last-element access (O(1) for both)
           cljs-peek-time (benchmark iterations #(peek cljs-v))
           native-peek-time (benchmark iterations #(peek native-v))]
-      (println "  first:")
-      (println (str "    CLJS vector:   " (format-time cljs-first-time)))
-      (println (str "    Native vector: " (format-time native-first-time)))
-      (println (str "    Ratio: " (.toFixed (/ cljs-first-time native-first-time) 2) "x"))
-      (println "")
       (println "  peek (last element):")
       (println (str "    CLJS vector:   " (format-time cljs-peek-time)))
       (println (str "    Native vector: " (format-time native-peek-time)))
@@ -395,6 +385,23 @@
           native-time (benchmark 10 build-and-query-native)]
       (println (str "  CLJS vector:   " (format-time cljs-time)))
       (println (str "  Native vector: " (format-time native-time)))
+      (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x")))
+    
+    ;; ========================================
+    ;; Benchmark 10: Equality comparison
+    ;; ========================================
+    (print-section "Benchmark 10: Equality (=) comparison")
+    (println (str "  Comparing vectors with " large-size " elements"))
+    (println "")
+    
+    (let [cljs-v1 (vec (range large-size))
+          cljs-v2 (vec (range large-size))
+          native-v1 (pv/from-array (apply array (range large-size)))
+          native-v2 (pv/from-array (apply array (range large-size)))
+          cljs-time (benchmark 1000 #(= cljs-v1 cljs-v2))
+          native-time (benchmark 1000 #(= native-v1 native-v2))]
+      (println (str "  CLJS vector:   " (format-time cljs-time)))
+      (println (str "  Native vector: " (format-time native-time)))
       (println (str "  Ratio: " (.toFixed (/ cljs-time native-time) 2) "x"))))
   
   (println "")
@@ -411,5 +418,6 @@
 
 ;; Entry point
 (defn init []
-  (run-examples)
-  (run-benchmarks))
+  #_(run-examples)
+  #_(run-benchmarks)
+  (pme/run-examples))

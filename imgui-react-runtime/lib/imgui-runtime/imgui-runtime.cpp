@@ -5,6 +5,7 @@
 #include "imgui-runtime.h"
 #include "WebSocketSupport.h"
 #include "PersistentVector.h"
+#include "PersistentMap.h"
 
 #include "sokol_app.h"
 #include "sokol_gfx.h"
@@ -446,6 +447,7 @@ sapp_desc sokol_main(int argc, char *argv[])
 
     // Install ClojureScript native data structures
     cljs::installPersistentVector(*s_hermesApp->hermes);
+    cljs::installPersistentMap(*s_hermesApp->hermes);
 
     // Initialize jslib's current time
     double curTimeMs = stm_ms(stm_now());
