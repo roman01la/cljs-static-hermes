@@ -7,3 +7,6 @@
 [submodule "imgui-react-runtime/external/glfw/glfw"]
 	path = imgui-react-runtime/external/glfw/glfw
 	url = https://github.com/glfw/glfw.git
+[submodule "imgui-react-runtime/external/yoga/yoga"]
+	path = imgui-react-runtime/external/yoga/yoga
+	url = https://github.com/facebook/yoga.git

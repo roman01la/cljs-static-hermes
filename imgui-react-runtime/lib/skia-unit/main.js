@@ -16,7 +16,27 @@ globalThis.on_frame = function on_frame(
 ): void {
   // Flush temporary allocations from previous frame
   flushAllocTmp();
+
+  // Compute Yoga layout before rendering
+  const rootChildren = globalThis.reactApp.rootChildren;
+  for (let i = 0; i < rootChildren.length; i++) {
+    const root = rootChildren[i];
+    if (root.type === 'root') {
+      root.props = { ...root.props, width: width, height: height, x: 0, y: 0 };
+    }
+    globalThis.yogaLayout.attachYogaNode(root);
+    globalThis.yogaLayout.applyYogaLayout(root);
+  }
+
   globalThis.skiaUnit.renderTree();
+};
+
+globalThis.on_exit = function on_exit(): void {
+  // Free all yoga nodes when exiting
+  const rootChildren = globalThis.reactApp.rootChildren;
+  for (let i = 0; i < rootChildren.length; i++) {
+    globalThis.yogaLayout.freeYogaNodes(rootChildren[i]);
+  }
 };
 
 const CAPTURE_PHASE = 1;
@@ -31,10 +51,12 @@ function findNodeAtPoint(node: any, x: number, y: number): any {
     return null;
   }
 
-  const left: number = node.props.x;
-  const top: number = node.props.y;
-  const width: number = node.props.width;
-  const height: number = node.props.height;
+  // Use computed layout if available, otherwise fall back to props
+  const layout = node._layout || node.props;
+  const left: number = layout.x ?? node.props.x ?? 0;
+  const top: number = layout.y ?? node.props.y ?? 0;
+  const width: number = layout.width ?? node.props.width ?? 0;
+  const height: number = layout.height ?? node.props.height ?? 0;
 
   if (x < left || x >= left + width || y < top || y >= top + height) {
     return null;
@@ -200,6 +222,7 @@ function propagateEvent(event: any): void {
         if (shouldStopImmediate) {
           shouldStopImmediate = false;
           shouldBubble = false;
+          return;
         }
       }
       if (!shouldBubble) {
@@ -220,6 +243,7 @@ function propagateEvent(event: any): void {
     if (shouldStopImmediate) {
       shouldStopImmediate = false;
       shouldBubble = false;
+      return;
     }
   }
 
@@ -242,6 +266,7 @@ function propagateEvent(event: any): void {
         if (shouldStopImmediate) {
           shouldStopImmediate = false;
           shouldBubble = false;
+          break;
         }
         if (!shouldBubble) {
           break;

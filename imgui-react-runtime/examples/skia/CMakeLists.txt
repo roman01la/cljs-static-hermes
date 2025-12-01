@@ -52,6 +52,7 @@ target_link_libraries(skia
     native-support
     native-cljs
     websockets
+    yoga
     "-framework OpenGL"
     "-framework Cocoa"
     "-framework IOKit"
@@ -78,8 +79,57 @@ target_include_directories(skia PRIVATE
     ${CMAKE_SOURCE_DIR}/lib/native
 )
 
+if(NOT DEFINED REACT_BUNDLE_MODE)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(REACT_BUNDLE_MODE 0)
+    else()
+        set(REACT_BUNDLE_MODE 2)
+    endif()
+endif()
+
+# Compile based on REACT_BUNDLE_MODE
+if(REACT_BUNDLE_MODE EQUAL 0)
+    # Mode 0: Native compilation with shermes (slowest build, fastest runtime)
+    set(REACT_UNIT_O react-unit${CMAKE_C_OUTPUT_EXTENSION})
+    hermes_compile_native(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${REACT_UNIT_O}
+        SOURCES ${REACT_UNIT_BUNDLE}
+        UNIT_NAME react
+        DEPENDS ${REACT_UNIT_BUNDLE}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Compiling React unit to native code"
+    )
+    set(REACT_UNIT_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${REACT_UNIT_O})
+
+elseif(REACT_BUNDLE_MODE EQUAL 1)
+    # Mode 1: Bytecode compilation with hermes (medium build/runtime speed)
+    set(REACT_UNIT_HBC ${CMAKE_CURRENT_BINARY_DIR}/react-unit-bundle.hbc)
+    hermes_compile_bytecode(
+        OUTPUT ${REACT_UNIT_HBC}
+        SOURCE ${REACT_UNIT_BUNDLE}
+        SOURCE_MAP ${REACT_UNIT_BUNDLE}.map
+        DEPENDS ${REACT_UNIT_BUNDLE}
+    )
+    set(REACT_UNIT_OUTPUT ${REACT_UNIT_HBC})
+
+elseif(REACT_BUNDLE_MODE EQUAL 2)
+    # Mode 2: Source bundle only (fastest build, slowest runtime)
+    set(REACT_UNIT_OUTPUT ${REACT_UNIT_BUNDLE})
+
+else()
+    message(FATAL_ERROR "Invalid REACT_BUNDLE_MODE: ${REACT_BUNDLE_MODE}. Must be 0, 1, or 2.")
+endif()
+
+# Link the React unit output if available
+if(REACT_BUNDLE_MODE EQUAL 0)
+    target_sources(skia PRIVATE ${REACT_UNIT_OUTPUT})
+else()
+    add_custom_target(skia_react_unit DEPENDS ${REACT_UNIT_OUTPUT})
+    add_dependencies(skia skia_react_unit)
+endif()
+
 # Set compile definitions for Skia example
 target_compile_definitions(skia PRIVATE
-    REACT_BUNDLE_MODE=2
+    REACT_BUNDLE_MODE=${REACT_BUNDLE_MODE}
     REACT_BUNDLE_PATH="${REACT_UNIT_BUNDLE}"
 )

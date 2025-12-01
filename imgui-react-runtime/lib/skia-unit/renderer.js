@@ -3,10 +3,12 @@ function renderRect(node: any): void {
 
   _paint_set_color(paint, node.props.backgroundColor);
 
-  const x = node.props.x;
-  const y = node.props.y;
-  const width = node.props.width;
-  const height = node.props.height;
+  // Use computed layout if available, otherwise fall back to props
+  const layout = node._layout || node.props;
+  const x = layout.x ?? node.props.x ?? 0;
+  const y = layout.y ?? node.props.y ?? 0;
+  const width = layout.width ?? node.props.width ?? 0;
+  const height = layout.height ?? node.props.height ?? 0;
 
   if (node.props.borderRadius) {
     const r = node.props.borderRadius;

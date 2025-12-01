@@ -2,17 +2,30 @@
   (:require [uix.core :as uix :refer [$ defui]]
             ["react-imgui-reconciler/reconciler.js" :as rir]))
 
+(defui box [{:keys [color children hover-enabled?] :or {hover-enabled? true}}]
+  (let [[hover? set-hover] (uix/use-state false)]
+    ($ :rect {:flex 1
+              :flex-direction :column
+              :background-color (if hover? 0xFF00FF00 (or color 0xFF00EEFF))
+              :border-radius 16
+              :padding 16
+              :gap 16
+              :on-mouse-enter (when hover-enabled? #(set-hover true))
+              :on-mouse-leave (when hover-enabled? #(set-hover false))}
+       children)))
+
 (defui app []
-  (let [[hover? set-hover] (uix/use-state false)
-        [active? set-active] (uix/use-state false)]
-    ($ :rect {:x 100 :y 200 :width 300 :height 500
-              :background-color (if active? 0xFF00FF00 0xFF0000FF)
-              :on-click #(set-active not)}
-      ($ :rect {:x 200 :y 230 :width 100 :height 100
-                :background-color (if hover? 0xFF00FF00 0xFFFF0000)
-                :border-radius 16
-                :on-mouse-enter #(set-hover true)
-                :on-mouse-leave #(set-hover false)}))))
+  (let [[active? set-active] (uix/use-state false)]
+    ($ :root
+      ($ :rect {:flex 1
+                :padding 32
+                :gap 44
+                :background-color (if active? 0xFF00FF00 0xFF0000FF)
+                :on-click #(set-active not)}
+        ($ box {:hover-enabled? false}
+           ($ box {:color 0xFFFF0000})
+           ($ box {:color 0xFFFF0000}))
+        ($ box)))))
 
 (defonce reload-fn (atom nil))
 
@@ -34,7 +47,7 @@
 
 (defn init []
   (register
-    {:title "ClojureScript + UIx + React + Skia Showcase"
+    {:title "ClojureScript + UIx + React + Skia + Yoga Showcase"
      :width 1024
      :height 768
      :component #'app}))

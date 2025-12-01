@@ -1,3 +1,5 @@
+#define GL_SILENCE_DEPRECATION
+
 #include <GLFW/glfw3.h>
 #include <hermes/VM/static_h.h>
 #include <cstdint>
@@ -95,7 +97,8 @@ void init_skia(int w, int h)
     framebufferInfo.fFormat = GL_RGBA8;
 
     SkColorType colorType = kRGBA_8888_SkColorType;
-    auto backendRenderTarget = GrBackendRenderTargets::MakeGL(w, h, 0, 0, framebufferInfo);
+    // Enable 4x MSAA for antialiasing
+    auto backendRenderTarget = GrBackendRenderTargets::MakeGL(w, h, 4, 8, framebufferInfo);
 
     sSurface = SkSurfaces::WrapBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, SkColorSpace::MakeSRGB(), nullptr).release();
 }
@@ -118,7 +121,8 @@ void recreate_skia_surface(int w, int h)
     framebufferInfo.fFormat = GL_RGBA8;
 
     SkColorType colorType = kRGBA_8888_SkColorType;
-    auto backendRenderTarget = GrBackendRenderTargets::MakeGL(w, h, 0, 0, framebufferInfo);
+    // Enable 4x MSAA for antialiasing
+    auto backendRenderTarget = GrBackendRenderTargets::MakeGL(w, h, 4, 8, framebufferInfo);
 
     sSurface = SkSurfaces::WrapBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, SkColorSpace::MakeSRGB(), nullptr).release();
     canvas = sSurface->getCanvas();
@@ -300,8 +304,9 @@ int main(void)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SRGB_CAPABLE, GL_TRUE);
-    glfwWindowHint(GLFW_STENCIL_BITS, 0);
+    glfwWindowHint(GLFW_STENCIL_BITS, 8);
     glfwWindowHint(GLFW_DEPTH_BITS, 0);
+    glfwWindowHint(GLFW_SAMPLES, 4); // Enable 4x MSAA
 
     window = glfwCreateWindow(kWidth, kHeight, "Simple example", NULL, NULL);
     if (!window)
@@ -374,14 +379,6 @@ int main(void)
     s_hermesApp->hermes->global().setProperty(*s_hermesApp->hermes,
                                               "performance", perf);
 
-    // Create globalThis.sappConfig with default title
-    auto sappConfig = facebook::jsi::Object(*s_hermesApp->hermes);
-    sappConfig.setProperty(*s_hermesApp->hermes, "title",
-                           facebook::jsi::String::createFromAscii(
-                               *s_hermesApp->hermes, "skia-react-runtime"));
-    s_hermesApp->hermes->global().setProperty(*s_hermesApp->hermes,
-                                              "sappConfig", sappConfig);
-
 #if REACT_BUNDLE_MODE != 0
     static constexpr SHUnit *(*sh_export_react)(void) = nullptr;
 #endif
@@ -403,6 +400,17 @@ int main(void)
     // Call on_init callback
     s_hermesApp->hermes->global().getPropertyAsFunction(*s_hermesApp->hermes, "on_init").call(*s_hermesApp->hermes);
     s_hermesApp->hermes->drainMicrotasks();
+
+    // Apply sappConfig settings to GLFW window
+    auto sappConfig = s_hermesApp->hermes->global().getPropertyAsObject(*s_hermesApp->hermes, "sappConfig");
+
+    auto title = sappConfig.getProperty(*s_hermesApp->hermes, "title").asString(*s_hermesApp->hermes).utf8(*s_hermesApp->hermes);
+    glfwSetWindowTitle(window, title.c_str());
+
+    int configWidth = (int)sappConfig.getProperty(*s_hermesApp->hermes, "width").asNumber();
+    int configHeight = (int)sappConfig.getProperty(*s_hermesApp->hermes, "height").asNumber();
+
+    glfwSetWindowSize(window, configWidth, configHeight);
 
     auto onFrame = s_hermesApp->hermes->global().getPropertyAsFunction(*s_hermesApp->hermes, "on_frame");
 
@@ -438,6 +446,17 @@ int main(void)
         sContext->flush();
 
         glfwSwapBuffers(window);
+    }
+
+    // Call on_exit callback to clean up resources
+    try
+    {
+        s_hermesApp->hermes->global().getPropertyAsFunction(*s_hermesApp->hermes, "on_exit").call(*s_hermesApp->hermes);
+        s_hermesApp->hermes->drainMicrotasks();
+    }
+    catch (...)
+    {
+        // Ignore errors during cleanup
     }
 
     _sh_done(shr);

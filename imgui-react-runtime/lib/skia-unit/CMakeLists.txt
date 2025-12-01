@@ -12,6 +12,7 @@ hermes_compile_native(
         ../imgui-unit/ffi_helpers.js
         ../imgui-unit/asciiz.js
         skia_externs.js
+        yoga_layout.js
         renderer.js
         main.js
     UNIT_NAME skia
@@ -20,7 +21,7 @@ hermes_compile_native(
 
 add_library(skia-unit STATIC skia_externs_cwrap.cpp ${CMAKE_CURRENT_BINARY_DIR}/${SKIA_UNIT_O})
 set_target_properties(skia-unit PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(skia-unit skia-lib)
+target_link_libraries(skia-unit skia-lib yoga)
 
 # Ensure Hermes is built before compiling this unit
 add_dependencies(skia-unit hermes)
