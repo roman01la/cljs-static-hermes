@@ -52,6 +52,10 @@
     "chrono": "cpp",
     "span": "cpp",
     "scoped_allocator": "cpp",
-    "text_encoding": "cpp"
+    "text_encoding": "cpp",
+    "image": "cpp",
+    "texture": "cpp",
+    "sokol_gfx.h": "c",
+    "sokol_imgui.h": "c"
   }
 }

@@ -8,6 +8,14 @@
         :runtime :custom
         :devtools {:client-ns hermes.repl.client
                    :preloads [uix.preload]}}
+  :skia-app {:target :esm
+             :output-dir "imgui-react-runtime/examples/skia/out"
+             :modules {:main {:entries [skia.app]
+                              :init-fn skia.app/init}}
+             :js-options {:js-provider :import}
+             :runtime :custom
+             :devtools {:client-ns hermes.repl.client
+                        :preloads [uix.preload]}}
   :persistent-vector-example
        {:target :browser
         :output-dir "imgui-react-runtime/examples/persistent-vector-demo/cljs-out"

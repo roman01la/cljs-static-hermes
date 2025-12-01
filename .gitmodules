@@ -1,3 +1,9 @@
 [submodule "imgui-react-runtime/external/libwebsockets/libwebsockets"]
 	path = imgui-react-runtime/external/libwebsockets/libwebsockets
 	url = https://github.com/warmcat/libwebsockets
+[submodule "imgui-react-runtime/external/skia/skia"]
+	path = imgui-react-runtime/external/skia/skia
+	url = https://skia.googlesource.com/skia.git
+[submodule "imgui-react-runtime/external/glfw/glfw"]
+	path = imgui-react-runtime/external/glfw/glfw
+	url = https://github.com/glfw/glfw.git

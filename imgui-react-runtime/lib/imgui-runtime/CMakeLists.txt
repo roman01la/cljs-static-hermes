@@ -3,10 +3,6 @@
 # See LICENSE file for full license text
 
 add_library(imgui-runtime imgui-runtime.cpp
-    MappedFileBuffer.cpp
-    MappedFileBuffer.h
-    WebSocketSupport.cpp
-    WebSocketSupport.h
     imgui-runtime.h
 )
 target_link_directories(imgui-runtime INTERFACE
@@ -15,7 +11,7 @@ target_link_directories(imgui-runtime INTERFACE
     ${HERMES_BUILD}/external/boost/boost_1_86_0/libs/context
 )
 target_link_libraries(imgui-runtime
-    sokol stb cimgui imgui-unit jslib-unit websockets native-cljs
+    sokol stb cimgui imgui-unit jslib-unit native-support websockets native-cljs
     $<$<CONFIG:Release>:hermesvm_a jsi boost_context>
     $<$<CONFIG:Debug>:hermesvm>
     $<$<PLATFORM_ID:Linux>:icuuc icui18n icudata>

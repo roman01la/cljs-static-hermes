@@ -17,14 +17,23 @@ target_include_directories(native-cljs PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# Add Hermes include directories
+target_include_directories(native-cljs PRIVATE
+    ${CMAKE_BINARY_DIR}/hermes/lib/config
+    ${CMAKE_BINARY_DIR}/hermes-src/include
+    ${CMAKE_BINARY_DIR}/hermes-src/public
+    ${CMAKE_BINARY_DIR}/hermes-src/API
+    ${CMAKE_BINARY_DIR}/hermes-src/API/jsi
+)
+
 # Immer headers need to be found via the 'immer' subdirectory
 target_include_directories(native-cljs SYSTEM PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_directories(native-cljs INTERFACE
-    ${HERMES_BUILD}/lib
-    ${HERMES_BUILD}/jsi
+    ${CMAKE_BINARY_DIR}/hermes/lib
+    ${CMAKE_BINARY_DIR}/hermes/jsi
 )
 
 # Link against Hermes for JSI support
@@ -32,3 +41,6 @@ target_link_libraries(native-cljs
     $<$<CONFIG:Release>:hermesvm_a jsi>
     $<$<CONFIG:Debug>:hermesvm>
 )
+
+# Ensure Hermes is built before this library
+add_dependencies(native-cljs hermes)

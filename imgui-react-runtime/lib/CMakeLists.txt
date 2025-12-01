@@ -4,7 +4,9 @@
 
 # JavaScript library units compiled with Static Hermes
 
+add_subdirectory(native-support)
 add_subdirectory(jslib-unit)
 add_subdirectory(imgui-unit)
+add_subdirectory(skia-unit)
 add_subdirectory(imgui-runtime)
 add_subdirectory(native)

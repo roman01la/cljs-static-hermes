@@ -4,3 +4,4 @@ node_modules
 .shadow-cljs/
 imgui-react-runtime/examples/persistent-vector-demo/cljs-out/
 imgui-react-runtime/examples/uix/out
+imgui-react-runtime/examples/skia/out
