@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <hermes/VM/static_h.h>
+
 #include <cstdint>
 #include <iostream>
 #include <cstring>
@@ -17,13 +18,15 @@
 #include "include/gpu/ganesh/gl/GrGLBackendSurface.h"
 #include "include/gpu/ganesh/SkSurfaceGanesh.h"
 #include "include/gpu/ganesh/GrBackendSurface.h"
-#include "include/core/SkData.h"
-#include "include/core/SkImage.h"
-#include "include/core/SkStream.h"
+
 #include "include/core/SkSurface.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkColorSpace.h"
+
+#include "include/core/SkFontMgr.h"
+#include "include/core/SkFont.h"
+#include "include/ports/SkFontMgr_directory.h"
 
 // OpenGL headers
 #ifdef __APPLE__
@@ -65,7 +68,8 @@ static HermesApp *s_hermesApp = nullptr;
 
 GrDirectContext *sContext = nullptr;
 SkSurface *sSurface = nullptr;
-SkCanvas *canvas;
+SkCanvas *canvas = nullptr;
+sk_sp<SkFontMgr> fontMgr = nullptr;
 int sWindowWidth = 0;
 int sWindowHeight = 0;
 float sDpiScale = 1.0f;
@@ -77,11 +81,22 @@ float calculateDpiScale(GLFWwindow *window)
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
     glfwGetWindowSize(window, &winWidth, &winHeight);
 
+    int scale;
+
     if (winWidth > 0 && fbWidth > 0)
     {
-        return (float)fbWidth / (float)winWidth;
+        scale = (float)fbWidth / (float)winWidth;
     }
-    return 1.0f;
+    else
+    {
+        scale = 1.0f;
+    }
+
+    s_hermesApp->hermes->global().setProperty(*s_hermesApp->hermes,
+                                              "devicePixelRatio",
+                                              facebook::jsi::Value(scale));
+
+    return scale;
 }
 
 void init_skia(int w, int h)
@@ -321,9 +336,6 @@ int main(void)
     int fbWidth, fbHeight;
     glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 
-    // Calculate and store DPI scale
-    sDpiScale = calculateDpiScale(window);
-
     auto runtimeConfig = ::hermes::vm::RuntimeConfig::Builder()
                              .withMicrotaskQueue(true)
                              .withES6BlockScoping(true)
@@ -354,6 +366,9 @@ int main(void)
                       helpers.getPropertyAsFunction(*hermes, "flushRaf"),
                       hermes->global()
                           .getPropertyAsFunction(*hermes, "on_event"));
+
+    // Calculate and store DPI scale
+    sDpiScale = calculateDpiScale(window);
 
     initializeWebSocketSupport(*s_hermesApp->hermes);
 

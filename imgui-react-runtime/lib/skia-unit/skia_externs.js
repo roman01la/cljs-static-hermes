@@ -31,6 +31,13 @@ const _canvas_draw_paint = $SHBuiltin.extern_c(
   }
 );
 
+const _paint_delete = $SHBuiltin.extern_c(
+  {},
+  function paint_delete_cwrap(_paint: c_ptr): void {
+    throw 0;
+  }
+);
+
 const _draw_rect = $SHBuiltin.extern_c(
   {},
   function draw_rect_cwrap(
@@ -59,7 +66,42 @@ const _draw_round_rect = $SHBuiltin.extern_c(
   }
 );
 
+const _draw_simple_text = $SHBuiltin.extern_c(
+  {},
+  function draw_simple_text_cwrap(
+    textPtr: c_ptr,
+    x: c_float,
+    y: c_float,
+    _font: c_ptr,
+    _paint: c_ptr
+  ): void {
+    throw 0;
+  }
+);
+
+const _create_font_manager = $SHBuiltin.extern_c(
+  {},
+  function create_font_manager_cwrap(pathPtr: c_ptr): void {
+    throw 0;
+  }
+);
+
+const _create_font = $SHBuiltin.extern_c(
+  {},
+  function create_font_cwrap(familyNamePtr: c_ptr, size: c_float): c_ptr {
+    throw 0;
+  }
+);
+
+const _font_delete = $SHBuiltin.extern_c(
+  {},
+  function font_delete_cwrap(_font: c_ptr): void {
+    throw 0;
+  }
+);
+
 const _sizeof_SkPaint = 80;
+const _sizeof_SkFont = 24;
 
 // Yoga layout bindings
 const yoga_node_new = $SHBuiltin.extern_c({}, function yoga_node_new(): c_ptr {
@@ -97,6 +139,13 @@ const yoga_node_set_height = $SHBuiltin.extern_c(
 const yoga_node_set_flex_grow = $SHBuiltin.extern_c(
   {},
   function yoga_node_set_flex_grow(_node: c_ptr, grow: c_float): void {
+    throw 0;
+  }
+);
+
+const yoga_node_set_flex_basis = $SHBuiltin.extern_c(
+  {},
+  function yoga_node_set_flex_basis(_node: c_ptr, basis: c_float): void {
     throw 0;
   }
 );

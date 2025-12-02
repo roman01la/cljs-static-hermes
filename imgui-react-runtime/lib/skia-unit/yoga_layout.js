@@ -3,8 +3,8 @@
 // Yoga enums
 const YGFlexDirection = {
   Column: 0,
-  Row: 1,
-  ColumnReverse: 2,
+  ColumnReverse: 1,
+  Row: 2,
   RowReverse: 3,
 };
 
@@ -38,6 +38,7 @@ const YGAlign = {
   Baseline: 5,
   SpaceBetween: 6,
   SpaceAround: 7,
+  SpaceEvenly: 8,
 };
 
 const YGGutter = {
@@ -71,6 +72,10 @@ class YogaNode {
 
   setFlexGrow(grow: number): void {
     yoga_node_set_flex_grow(this.native, grow);
+  }
+
+  setFlexBasis(basis: number): void {
+    yoga_node_set_flex_basis(this.native, basis);
   }
 
   setPadding(edge: number, padding: number): void {
@@ -147,20 +152,27 @@ function applyFlexboxProps(yogaNode: YogaNode, props: any): void {
     yogaNode.setFlexDirection(direction);
   }
 
-  // Dimensions
+  // Flex properties (set before dimensions for proper flex behavior)
+  if (props.flex !== undefined) {
+    yogaNode.setFlexGrow(props.flex);
+    // Set flex basis to 0 to prevent auto-sizing when using flex
+    yogaNode.setFlexBasis(0);
+  }
+  if (props.flexGrow !== undefined) {
+    yogaNode.setFlexGrow(props.flexGrow);
+    // Set flex basis to 0 to prevent auto-sizing when growing
+    yogaNode.setFlexBasis(0);
+  }
+  if (props.flexBasis !== undefined) {
+    yogaNode.setFlexBasis(props.flexBasis);
+  }
+
+  // Dimensions (set after flex to ensure proper constraint handling)
   if (props.width !== undefined && props.width > 0) {
     yogaNode.setWidth(props.width);
   }
   if (props.height !== undefined && props.height > 0) {
     yogaNode.setHeight(props.height);
-  }
-
-  // Flex properties
-  if (props.flex !== undefined) {
-    yogaNode.setFlexGrow(props.flex);
-  }
-  if (props.flexGrow !== undefined) {
-    yogaNode.setFlexGrow(props.flexGrow);
   }
 
   // Padding
@@ -228,6 +240,7 @@ function attachYogaNode(reactNode: any): void {
 
 // Apply Yoga layout to React node tree
 function applyYogaLayout(node: any): void {
+  if (node.text) return;
   // Create fresh yoga node for each frame to avoid ownership issues
   node.yoga = createYogaNode();
 
@@ -266,16 +279,16 @@ function applyYogaLayout(node: any): void {
   // Apply layout to children
   if (node.children && node.children.length > 0) {
     for (let i = 0; i < node.children.length; i++) {
-      updateNodeFromYoga(node.children[i], node._layout.x, node._layout.y);
+      updateNodeFromYoga(
+        node.children[i],
+        node._layout.x || 0,
+        node._layout.y || 0
+      );
     }
   }
 }
 
-function updateNodeFromYoga(
-  node: any,
-  parentX: number = 0,
-  parentY: number = 0
-): void {
+function updateNodeFromYoga(node: any, parentX: number, parentY: number): void {
   if (node.yoga) {
     const layout = node.yoga.getLayout();
     // Position child relative to parent's position
@@ -289,7 +302,11 @@ function updateNodeFromYoga(
 
   if (node.children && node.children.length > 0) {
     for (let i = 0; i < node.children.length; i++) {
-      updateNodeFromYoga(node.children[i], node._layout.x, node._layout.y);
+      updateNodeFromYoga(
+        node.children[i],
+        node._layout.x || 0,
+        node._layout.y || 0
+      );
     }
   }
 }

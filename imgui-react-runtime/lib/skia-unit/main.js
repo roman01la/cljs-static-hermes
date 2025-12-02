@@ -22,7 +22,11 @@ globalThis.on_frame = function on_frame(
   for (let i = 0; i < rootChildren.length; i++) {
     const root = rootChildren[i];
     if (root.type === 'root') {
-      root.props = { ...root.props, width: width, height: height, x: 0, y: 0 };
+      root.props = {};
+      root.props.width = width;
+      root.props.height = height;
+      root.props.x = 0;
+      root.props.y = 0;
     }
     globalThis.yogaLayout.attachYogaNode(root);
     globalThis.yogaLayout.applyYogaLayout(root);
@@ -47,7 +51,7 @@ let sPreviousMouseTarget: any = null;
 
 function findNodeAtPoint(node: any, x: number, y: number): any {
   // Check if node contains the point
-  if (!node) {
+  if (!node || node.text) {
     return null;
   }
 

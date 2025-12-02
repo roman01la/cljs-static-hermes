@@ -1,8 +1,14 @@
 #include "include/core/SkPaint.h"
 #include "include/core/SkCanvas.h"
+#include "include/core/SkFontMgr.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontMetrics.h"
+#include "include/ports/SkFontMgr_directory.h"
 #include <yoga/Yoga.h>
 
 extern "C" SkCanvas *canvas;
+extern "C" sk_sp<SkFontMgr> fontMgr;
+extern "C" float sDpiScale;
 
 extern "C"
 {
@@ -29,6 +35,11 @@ extern "C"
         canvas->drawPaint(*paint);
     }
 
+    void paint_delete_cwrap(SkPaint *paint)
+    {
+        delete paint;
+    }
+
     void draw_rect_cwrap(float x, float y, float width, float height, SkPaint *paint)
     {
         float x2 = x + width;
@@ -41,6 +52,35 @@ extern "C"
         float x2 = x + width;
         float y2 = y + height;
         canvas->drawRoundRect({x, y, x2, y2}, rx, ry, *paint);
+    }
+
+    void create_font_manager_cwrap(const char *path)
+    {
+        fontMgr = SkFontMgr_New_Custom_Directory(path);
+    }
+
+    SkFont *create_font_cwrap(const char *familyName, float size)
+    {
+        sk_sp<SkFontStyleSet> fontStyleSet(fontMgr->matchFamily(familyName));
+        sk_sp<SkTypeface> tf(fontStyleSet->createTypeface(0));
+        auto font = new SkFont();
+        font->setTypeface(tf);
+        font->setSize(size);
+        return font;
+    }
+
+    void font_delete_cwrap(SkFont *font)
+    {
+        delete font;
+    }
+
+    void draw_simple_text_cwrap(const char *text, float x, float y, SkFont *font, SkPaint *paint)
+    {
+        SkFontMetrics metrics;
+        font->getMetrics(&metrics);
+        size_t textLength = strlen(text);
+        float adjustedY = y - metrics.fAscent;
+        canvas->drawSimpleText(text, textLength, SkTextEncoding::kUTF8, x, adjustedY, *font, *paint);
     }
 
     // Yoga layout bindings
@@ -72,6 +112,11 @@ extern "C"
     void yoga_node_set_flex_grow(YGNodeRef node, float grow)
     {
         YGNodeStyleSetFlexGrow(node, grow);
+    }
+
+    void yoga_node_set_flex_basis(YGNodeRef node, float basis)
+    {
+        YGNodeStyleSetFlexBasis(node, basis);
     }
 
     void yoga_node_set_padding(YGNodeRef node, int edge, float padding)
