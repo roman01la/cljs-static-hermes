@@ -1,15 +1,16 @@
-_This project demonstrates use of ClojureScript and UIx, together with React and a custom reconciler to drive a native window with ImGui via AOT compiled JavaScript with Static Hermes._  
+_This project demonstrates use of ClojureScript and UIx, together with React and a custom reconciler to drive a native window with ImGui and Skia with Yoga layout via AOT compiled JavaScript with Static Hermes._
 
 - Based off https://github.com/tmikov/imgui-react-runtime
 - Read more about [Static Hermes and imgui-react-runtime here](imgui-react-runtime/README.md)
 
 Differences from _tmikov/imgui-react-runtime_:
 
-- Bundles [UIx](https://github.com/pitch-io/uix) app written in ClojureScript 
+- Bundles [UIx](https://github.com/pitch-io/uix) app written in ClojureScript
 - Exposes `WebSocket` interface to JS env via [libwebsockets](https://github.com/warmcat/libwebsockets), needed for REPL connection in dev
 - Supports hot-reloading cljs code in dev, via custom REPL client runtime
 - Supports state preserving hot-reloading via react-refresh
 - Runs `requestAnimationFrame` at device's refresh rate (60/120/144hz etc)
+- Skia example includes [Skia](https://skia.org/) graphics rendered in [GLFW](https://www.glfw.org/) window, with [Yoga](https://www.yogalayout.dev/) as flex box layout engine and DOM-like event propagation system
 
 ## Development
 
@@ -34,6 +35,7 @@ _native dependencies + native AOT compiled javascript for maximum performance_
 1. Run the binary `./cmake-build-release/examples/uix/uix`
 
 Output binary: 8MB
+
 - 3MB Hermes VM
 - 1.8MB React library
 - 3.2MB app/renderer/ImGui
